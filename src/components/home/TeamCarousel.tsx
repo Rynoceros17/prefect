@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useRef, useState } from 'react'
 import { useEditMode } from '../../context/EditModeContext'
 import type { LeaderProfile } from '../../types'
-import { processImageFile } from '../../utils/images'
+import { uploadImageFromFile } from '../../services/imageUpload'
 import { adjustLeadersForRemovedImage, createLeaderAt } from '../../utils/migrateSiteData'
 import { roleToSlug } from '../../utils/leaders'
 import { reorderImages } from '../../utils/postImages'
@@ -117,7 +117,10 @@ export function TeamCarousel({
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const dataUrl = await processImageFile(file, { maxWidth: 1920, maxHeight: 1080 })
+      const dataUrl = await uploadImageFromFile(file, `images/carousel/${crypto.randomUUID()}`, {
+        maxWidth: 1920,
+        maxHeight: 1080,
+      })
       onUpdateImages([...images, dataUrl])
       setIndex(images.length)
     } catch {

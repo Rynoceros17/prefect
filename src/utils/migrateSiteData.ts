@@ -1,6 +1,8 @@
 import type { LeaderHotspot, LeaderProfile, LeadershipRole, NavEmojis, SiteData } from '../types'
 import { DEFAULT_SITE_DATA } from '../data/defaults'
 import { normalizeRole } from './leaders'
+import { normalizeJourneyData } from './journey'
+import { normalizeTheatreGridVideos } from './theatreGrid'
 
 const placeholderPortrait = (seed: number) =>
   `https://images.unsplash.com/photo-${seed}?w=400&h=400&fit=crop&crop=face`
@@ -65,6 +67,7 @@ function migrateNavEmojis(navEmojis?: Partial<NavEmojis>): NavEmojis {
     homepage: navEmojis?.homepage ?? navEmojis?.leaders ?? DEFAULT_SITE_DATA.navEmojis.homepage,
     theatre: navEmojis?.theatre ?? DEFAULT_SITE_DATA.navEmojis.theatre,
     gallery: navEmojis?.gallery ?? DEFAULT_SITE_DATA.navEmojis.gallery,
+    journey: navEmojis?.journey ?? DEFAULT_SITE_DATA.navEmojis.journey,
   }
 }
 
@@ -92,7 +95,14 @@ export function migrateSiteData(parsed: Partial<SiteData>): SiteData {
     leaders,
     navEmojis: migrateNavEmojis(parsed.navEmojis),
     videos: parsed.videos ?? DEFAULT_SITE_DATA.videos,
-    posts: parsed.posts ?? DEFAULT_SITE_DATA.posts,
+    theatreGridVideos: normalizeTheatreGridVideos(
+      parsed.theatreGridVideos ?? DEFAULT_SITE_DATA.theatreGridVideos,
+    ),
+    journey: normalizeJourneyData(parsed.journey ?? DEFAULT_SITE_DATA.journey),
+    posts: (parsed.posts ?? DEFAULT_SITE_DATA.posts).map((post, index) => ({
+      ...post,
+      createdAt: post.createdAt ?? new Date(Date.now() - index * 86400000).toISOString(),
+    })),
   }
 }
 

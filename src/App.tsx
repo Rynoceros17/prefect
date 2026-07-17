@@ -4,6 +4,7 @@ import { EditModeProvider } from './context/EditModeContext'
 import { SiteDataProvider } from './context/SiteDataContext'
 import { GalleryPage } from './pages/GalleryPage'
 import { HomePage } from './pages/HomePage'
+import { JourneyPage } from './pages/JourneyPage'
 import { TheatrePage } from './pages/TheatrePage'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
               <Route index element={<HomePage />} />
               <Route path="theatre" element={<TheatrePage />} />
               <Route path="gallery" element={<GalleryPage />} />
+              <Route path="journey" element={<JourneyPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

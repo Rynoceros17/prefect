@@ -2,9 +2,16 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRef, useState } from 'react'
 import { GALLERY_USERNAME } from '../../data/gallery'
 import type { GalleryPost, PostAspectRatio, PostImageMeta } from '../../types'
-import { processImageFile } from '../../utils/images'
+import { uploadImageFromFile } from '../../services/imageUpload'
+import { downloadPostImages } from '../../utils/downloadImages'
+import {
+  formatPostDate,
+  fromDateInputValue,
+  toDateInputValue,
+} from '../../utils/postDates'
 import {
   ASPECT_RATIO_OPTIONS,
+  DEFAULT_POST_ASPECT_RATIO,
   normalizeImageMeta,
   reorderImages,
 } from '../../utils/postImages'
@@ -25,10 +32,11 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
   const postRef = useRef<HTMLElement>(null)
   const [showHearts, setShowHearts] = useState(false)
   const [shareToast, setShareToast] = useState(false)
+  const [downloadToast, setDownloadToast] = useState(false)
   const [cropIndex, setCropIndex] = useState<number | null>(null)
 
   const imageMeta = normalizeImageMeta(post.images, post.imageMeta)
-  const aspectRatio = post.aspectRatio ?? '1'
+  const aspectRatio = post.aspectRatio ?? DEFAULT_POST_ASPECT_RATIO
 
   const updateWithMeta = (images: string[], meta: PostImageMeta[]) => {
     onUpdate({ ...post, images, imageMeta: meta })
@@ -66,7 +74,12 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
     const toAdd = files.slice(0, remaining)
     try {
       const dataUrls = await Promise.all(
-        toAdd.map((file) => processImageFile(file, { maxWidth: 1200, maxHeight: 1200 })),
+        toAdd.map((file) =>
+          uploadImageFromFile(file, `images/posts/${post.id}/${crypto.randomUUID()}`, {
+            maxWidth: 1200,
+            maxHeight: 1200,
+          }),
+        ),
       )
       const images = [...post.images, ...dataUrls].slice(0, 20)
       updateWithMeta(images, normalizeImageMeta(images, [...imageMeta, ...dataUrls.map(() => ({ panX: 0, panY: 0, zoom: 1 }))]))
@@ -94,6 +107,17 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
     onUpdate({ ...post, imageMeta: metaCopy })
   }
 
+  const handleDownload = async () => {
+    if (!post.images.length) return
+    try {
+      await downloadPostImages(post.id, post.images)
+      setDownloadToast(true)
+      window.setTimeout(() => setDownloadToast(false), 2000)
+    } catch {
+      window.alert('Could not download photos. Try again or open the image in a new tab.')
+    }
+  }
+
   const handleAspectRatio = (value: PostAspectRatio) => {
     onUpdate({ ...post, aspectRatio: value })
   }
@@ -109,7 +133,26 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
     >
       <div className="post-card__header">
         <ProfileAvatar size="sm" />
-        <span className="post-card__username">{GALLERY_USERNAME}</span>
+        <div className="post-card__header-text">
+          <span className="post-card__username">{GALLERY_USERNAME}</span>
+          {isEditMode ? (
+            <label className="post-card__date-edit">
+              Date
+              <input
+                type="date"
+                className="post-card__date-input"
+                value={toDateInputValue(post.createdAt)}
+                onChange={(e) =>
+                  onUpdate({ ...post, createdAt: fromDateInputValue(e.target.value) })
+                }
+              />
+            </label>
+          ) : (
+            <time className="post-card__date" dateTime={post.createdAt}>
+              {formatPostDate(post.createdAt)}
+            </time>
+          )}
+        </div>
         {post.pinned && <span className="post-card__pinned" title="Pinned">📌</span>}
       </div>
 
@@ -161,8 +204,20 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
           >
             ↗
           </motion.button>
+          {post.images.length > 0 && (
+            <motion.button
+              className="action-btn"
+              onClick={() => void handleDownload()}
+              whileTap={{ scale: 0.9 }}
+              aria-label="Download photos"
+              title="Download photos"
+            >
+              ↓
+            </motion.button>
+          )}
         </div>
         {shareToast && <span className="share-toast">Link copied!</span>}
+        {downloadToast && <span className="share-toast">Downloading…</span>}
       </div>
 
       <p className="post-card__likes">{post.likes.toLocaleString()} likes</p>

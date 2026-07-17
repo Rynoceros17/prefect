@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { ModalPortal } from '../ModalPortal'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import type { LeaderProfile } from '../../types'
-import { processImageFile } from '../../utils/images'
+import { uploadImageFromFile } from '../../services/imageUpload'
 import { LEADERSHIP_ROLES, roleToSlug } from '../../utils/leaders'
 
 interface LeaderModalProps {
@@ -31,10 +31,14 @@ export function LeaderModal({ leader, onClose, isEditMode, onSave, onDelete }: L
       const file = e.target.files?.[0]
       if (!file) return
       try {
-        const dataUrl = await processImageFile(file, {
-          maxWidth: maxSize,
-          maxHeight: maxSize,
-        })
+        const dataUrl = await uploadImageFromFile(
+          file,
+          `images/leaders/${draft.id}/${field === 'profilePicUrl' ? 'profile' : 'hero'}-${crypto.randomUUID()}`,
+          {
+            maxWidth: maxSize,
+            maxHeight: maxSize,
+          },
+        )
         setDraft((current) => (current ? { ...current, [field]: dataUrl } : current))
       } catch {
         window.alert('Could not process that image. Try a smaller file.')

@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { EDIT_PASSWORD } from '../data/defaults'
+import { EDITOR_PASSWORD } from '../config/editor'
 
 interface EditModeContextValue {
   isEditMode: boolean
@@ -29,13 +29,11 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
   const closePasswordModal = useCallback(() => setShowPasswordModal(false), [])
 
   const attemptUnlock = useCallback((password: string) => {
-    if (password === EDIT_PASSWORD) {
-      setIsEditMode(true)
-      sessionStorage.setItem('leadership-edit-mode', 'true')
-      setShowPasswordModal(false)
-      return true
-    }
-    return false
+    if (!EDITOR_PASSWORD || password !== EDITOR_PASSWORD) return false
+    setIsEditMode(true)
+    sessionStorage.setItem('leadership-edit-mode', 'true')
+    setShowPasswordModal(false)
+    return true
   }, [])
 
   const exitEditMode = useCallback(() => {

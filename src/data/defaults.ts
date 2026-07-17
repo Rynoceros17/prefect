@@ -1,4 +1,5 @@
 import type { SiteData } from '../types'
+import { normalizeJourneyData } from '../utils/journey'
 
 const placeholderPortrait = (seed: number) =>
   `https://images.unsplash.com/photo-${seed}?w=400&h=400&fit=crop&crop=face`
@@ -105,6 +106,29 @@ export const DEFAULT_SITE_DATA: SiteData = {
       releaseDate: '2026-08-10',
     },
   ],
+  theatreGridVideos: [
+    {
+      id: 'grid-video-1',
+      title: 'Assembly Highlights',
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+    {
+      id: 'grid-video-2',
+      title: 'Sports Day Recap',
+      youtubeUrl: 'https://www.youtube.com/watch?v=9bZkp7q19f0',
+    },
+    {
+      id: 'grid-video-3',
+      title: 'Prefect Q&A',
+      youtubeUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
+    },
+    { id: 'grid-video-4', title: '', youtubeUrl: '' },
+    { id: 'grid-video-5', title: '', youtubeUrl: '' },
+    { id: 'grid-video-6', title: '', youtubeUrl: '' },
+    { id: 'grid-video-7', title: '', youtubeUrl: '' },
+    { id: 'grid-video-8', title: '', youtubeUrl: '' },
+    { id: 'grid-video-9', title: '', youtubeUrl: '' },
+  ],
   posts: [
     {
       id: 'post-1',
@@ -117,6 +141,7 @@ export const DEFAULT_SITE_DATA: SiteData = {
       likes: 128,
       liked: false,
       pinned: true,
+      aspectRatio: '2/1',
       createdAt: new Date().toISOString(),
     },
     {
@@ -127,6 +152,7 @@ export const DEFAULT_SITE_DATA: SiteData = {
       ],
       likes: 94,
       liked: false,
+      aspectRatio: '2/1',
       createdAt: new Date(Date.now() - 86400000).toISOString(),
     },
     {
@@ -138,15 +164,17 @@ export const DEFAULT_SITE_DATA: SiteData = {
       ],
       likes: 67,
       liked: false,
+      aspectRatio: '2/1',
       createdAt: new Date(Date.now() - 172800000).toISOString(),
     },
   ],
+  journey: normalizeJourneyData({}),
   navEmojis: {
     homepage: '🏠',
     theatre: '🎭',
     gallery: '📸',
+    journey: '🚀',
   },
 }
 
-export const EDIT_PASSWORD = 'themagicschoolbus27'
 export const STORAGE_KEY = 'leadership-gallery-data'

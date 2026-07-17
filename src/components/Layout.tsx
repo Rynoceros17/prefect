@@ -4,6 +4,9 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { Navigation } from './Navigation'
 import { EditModeBubble } from './EditModeBubble'
 import { PasswordModal } from './PasswordModal'
+import { SyncStatus } from './SyncStatus'
+import { useEditMode } from '../context/EditModeContext'
+import { useSiteDataContext } from '../context/SiteDataContext'
 
 const pageVariants = {
   initial: { opacity: 0, y: 30, filter: 'blur(8px)' },
@@ -13,20 +16,29 @@ const pageVariants = {
 
 export function Layout() {
   const location = useLocation()
+  const { isLoading, isFirebaseEnabled } = useSiteDataContext()
+  const { isEditMode } = useEditMode()
   const isGallery = location.pathname === '/gallery'
   const isHomepage = location.pathname === '/'
+  const isJourney = location.pathname === '/journey'
 
   useEffect(() => {
     document.body.classList.toggle('body--gallery', isGallery)
     document.body.classList.toggle('body--homepage', isHomepage)
+    document.body.classList.toggle('body--journey', isJourney)
+    document.body.classList.toggle('body--edit-mode', isEditMode)
     return () => {
       document.body.classList.remove('body--gallery')
       document.body.classList.remove('body--homepage')
+      document.body.classList.remove('body--journey')
+      document.body.classList.remove('body--edit-mode')
     }
-  }, [isGallery, isHomepage])
+  }, [isGallery, isHomepage, isJourney, isEditMode])
 
   return (
-    <div className={`app ${isGallery ? 'app--gallery' : ''} ${isHomepage ? 'app--homepage' : ''}`}>
+    <div
+      className={`app ${isGallery ? 'app--gallery' : ''} ${isHomepage ? 'app--homepage' : ''} ${isJourney ? 'app--journey' : ''} ${isEditMode ? 'app--edit-mode' : ''}`}
+    >
       <div className="app__bg">
         <div className="app__bg-orb app__bg-orb--1" />
         <div className="app__bg-orb app__bg-orb--2" />
@@ -37,6 +49,13 @@ export function Layout() {
       <Navigation />
       <EditModeBubble />
       <PasswordModal />
+      <SyncStatus />
+
+      {isFirebaseEnabled && isLoading && (
+        <div className="site-loading" aria-live="polite" aria-busy="true">
+          <div className="site-loading__card">Loading site…</div>
+        </div>
+      )}
 
       <main className="main">
         <AnimatePresence mode="wait">
@@ -53,7 +72,7 @@ export function Layout() {
         </AnimatePresence>
       </main>
 
-      {!isGallery && (
+      {!isGallery && !isJourney && (
         <footer className="footer">
           <motion.p
             initial={{ opacity: 0 }}

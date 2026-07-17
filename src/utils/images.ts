@@ -14,22 +14,28 @@ function readBlobAsDataUrl(blob: Blob): Promise<string> {
 }
 
 /** Resize and compress images before storing — prevents localStorage blow-ups and black screens. */
-export async function processImageFile(
+export async function processImageFileToBlob(
   file: File,
   options: ProcessImageOptions = {},
-): Promise<string> {
+): Promise<Blob> {
   const { maxWidth = 1600, maxHeight = 1600, quality = 0.82 } = options
 
   if (!file.type.startsWith('image/')) {
     throw new Error('Please choose an image file.')
   }
 
-  // Skip recompression for already-small files (< 400 KB)
   if (file.size < 400_000) {
-    return readFileAsDataUrl(file)
+    return file
   }
 
-  const blob = await compressImage(file, maxWidth, maxHeight, quality)
+  return compressImage(file, maxWidth, maxHeight, quality)
+}
+
+export async function processImageFile(
+  file: File,
+  options: ProcessImageOptions = {},
+): Promise<string> {
+  const blob = await processImageFileToBlob(file, options)
   return readBlobAsDataUrl(blob)
 }
 
