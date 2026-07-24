@@ -9,6 +9,8 @@ import {
 import { DEFAULT_SITE_DATA } from '../data/defaults'
 import type { SiteData } from '../types'
 import { migrateSiteData } from '../utils/migrateSiteData'
+import { deleteStorageImages } from '../services/imageUpload'
+import { collectSiteImageUrls, findOrphanedImageUrls } from '../utils/siteImageUrls'
 import { uploadEmbeddedImages } from '../utils/siteDataImages'
 import { normalizeVideoRelease } from '../utils/videoRelease'
 import { FIRESTORE_SITE_PATH, getFirebaseDb, isFirebaseConfigured } from '../lib/firebase'
@@ -64,9 +66,10 @@ export function subscribeSiteData(
   )
 }
 
-export async function saveSiteData(data: SiteData): Promise<number> {
-  if (!isFirebaseConfigured()) return 0
+export async function saveSiteData(data: SiteData): Promise<{ updatedAtMs: number; content: SiteData }> {
+  if (!isFirebaseConfigured()) return { updatedAtMs: 0, content: data }
 
+  const previous = await fetchSiteData()
   const content = await uploadEmbeddedImages(data)
   const updatedAtMs = Date.now()
 
@@ -79,5 +82,15 @@ export async function saveSiteData(data: SiteData): Promise<number> {
     { merge: true },
   )
 
-  return updatedAtMs
+  if (previous) {
+    const orphaned = findOrphanedImageUrls(
+      collectSiteImageUrls(previous),
+      collectSiteImageUrls(content),
+    )
+    if (orphaned.length > 0) {
+      await deleteStorageImages(orphaned)
+    }
+  }
+
+  return { updatedAtMs, content }
 }

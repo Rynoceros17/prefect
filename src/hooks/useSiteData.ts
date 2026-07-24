@@ -141,9 +141,11 @@ export function useSiteData() {
     setSaveSuccess(false)
 
     try {
-      const updatedAtMs = await saveSiteData(snapshot)
+      const { updatedAtMs, content } = await saveSiteData(snapshot)
       lastSavedAtRef.current = updatedAtMs
-      markSaved(snapshot)
+      setData(content)
+      cacheSiteDataLocally(content)
+      markSaved(content)
       setStorageError(null)
       warnedRef.current = false
       setSaveSuccess(true)

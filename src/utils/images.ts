@@ -2,6 +2,48 @@ export interface ProcessImageOptions {
   maxWidth?: number
   maxHeight?: number
   quality?: number
+  /** Keep the original file when it already fits these bounds. */
+  maxBytes?: number
+}
+
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Could not load image.'))
+    }
+
+    img.src = objectUrl
+  })
+}
+
+/** Resize and compress images before storing — prevents localStorage blow-ups and black screens. */
+export async function processImageFileToBlob(
+  file: File,
+  options: ProcessImageOptions = {},
+): Promise<Blob> {
+  const { maxWidth = 1600, maxHeight = 1600, quality = 0.88, maxBytes = 2_000_000 } = options
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please choose an image file.')
+  }
+
+  const { width, height } = await readImageDimensions(file)
+  const fitsBounds = width <= maxWidth && height <= maxHeight
+
+  if (fitsBounds && file.size <= maxBytes) {
+    return file
+  }
+
+  return compressImage(file, maxWidth, maxHeight, quality)
 }
 
 function readBlobAsDataUrl(blob: Blob): Promise<string> {
@@ -11,24 +53,6 @@ function readBlobAsDataUrl(blob: Blob): Promise<string> {
     reader.onerror = reject
     reader.readAsDataURL(blob)
   })
-}
-
-/** Resize and compress images before storing — prevents localStorage blow-ups and black screens. */
-export async function processImageFileToBlob(
-  file: File,
-  options: ProcessImageOptions = {},
-): Promise<Blob> {
-  const { maxWidth = 1600, maxHeight = 1600, quality = 0.82 } = options
-
-  if (!file.type.startsWith('image/')) {
-    throw new Error('Please choose an image file.')
-  }
-
-  if (file.size < 400_000) {
-    return file
-  }
-
-  return compressImage(file, maxWidth, maxHeight, quality)
 }
 
 export async function processImageFile(
@@ -69,14 +93,22 @@ function compressImage(
 
       ctx.drawImage(img, 0, 0, width, height)
 
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob)
-          else reject(new Error('Image compression failed.'))
-        },
-        'image/jpeg',
-        quality,
-      )
+      const tryEncode = (mime: string) =>
+        new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((blob) => resolve(blob), mime, quality)
+        })
+
+      void (async () => {
+        const webp = await tryEncode('image/webp')
+        if (webp) {
+          resolve(webp)
+          return
+        }
+
+        const jpeg = await tryEncode('image/jpeg')
+        if (jpeg) resolve(jpeg)
+        else reject(new Error('Image compression failed.'))
+      })()
     }
 
     img.onerror = () => {

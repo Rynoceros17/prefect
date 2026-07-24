@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEditMode } from '../../context/EditModeContext'
 import type { LeaderProfile } from '../../types'
 import { uploadImageFromFile } from '../../services/imageUpload'
 import { adjustLeadersForRemovedImage, createLeaderAt } from '../../utils/migrateSiteData'
 import { roleToSlug } from '../../utils/leaders'
+import { preloadImageSources, heroCarouselUploadOptions } from '../../utils/imagePresets'
 import { reorderImages } from '../../utils/postImages'
+import { HomeImage } from './HomeImage'
 
 interface TeamCarouselProps {
   images: string[]
@@ -35,6 +37,13 @@ export function TeamCarousel({
   const safeImages = images.length > 0 ? images : ['']
   const currentIndex = Math.min(index, safeImages.length - 1)
   const slideLeaders = leaders.filter((leader) => leader.carouselIndex === currentIndex)
+
+  useEffect(() => {
+    if (safeImages.length <= 1) return
+    const prev = (currentIndex - 1 + safeImages.length) % safeImages.length
+    const next = (currentIndex + 1) % safeImages.length
+    preloadImageSources([safeImages[prev], safeImages[next]])
+  }, [currentIndex, safeImages])
 
   const paginate = useCallback(
     (dir: number) => {
@@ -117,10 +126,11 @@ export function TeamCarousel({
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const dataUrl = await uploadImageFromFile(file, `images/carousel/${crypto.randomUUID()}`, {
-        maxWidth: 1920,
-        maxHeight: 1080,
-      })
+      const dataUrl = await uploadImageFromFile(
+        file,
+        `images/carousel/${crypto.randomUUID()}`,
+        heroCarouselUploadOptions(),
+      )
       onUpdateImages([...images, dataUrl])
       setIndex(images.length)
     } catch {
@@ -178,10 +188,11 @@ export function TeamCarousel({
               }}
             >
               {safeImages[currentIndex] ? (
-                <img
+                <HomeImage
                   src={safeImages[currentIndex]}
                   alt={`Team photo ${currentIndex + 1}`}
                   className="team-carousel__image"
+                  priority
                   draggable={false}
                 />
               ) : (

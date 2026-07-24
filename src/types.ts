@@ -161,6 +161,8 @@ export interface GalleryPost {
   id: string
   caption: string
   images: string[]
+  /** Higher-resolution variants for lightbox — parallel to `images`. */
+  fullImages?: string[]
   imageMeta?: PostImageMeta[]
   aspectRatio?: PostAspectRatio
   likes: number

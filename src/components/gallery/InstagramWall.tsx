@@ -2,18 +2,21 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useEditMode } from '../../context/EditModeContext'
+import { useGalleryColumnCount } from '../../hooks/useGalleryColumnCount'
 import { useSiteDataContext } from '../../context/SiteDataContext'
 import type { GalleryPost } from '../../types'
 import { collectHashtags, postMatchesHashtag } from '../../utils/hashtags'
 import { countPostsByMonth, postMatchesMonth } from '../../utils/postDates'
+import { distributePostsToColumns } from '../../utils/galleryMasonry'
 import { DEFAULT_POST_ASPECT_RATIO } from '../../utils/postImages'
-import { GallerySidebar, sortPostsByDate } from './GallerySidebar'
+import { GalleryFilterBar, sortPostsByDate } from './GallerySidebar'
 import { ProfileAvatar } from './ProfileAvatar'
 import { PostCard } from './PostCard'
 
 export function InstagramWall() {
   const { data, updateData } = useSiteDataContext()
   const { isEditMode } = useEditMode()
+  const columnCount = useGalleryColumnCount()
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeHashtag, setActiveHashtag] = useState<string | null>(null)
   const [activeMonth, setActiveMonth] = useState<number | null>(null)
@@ -43,6 +46,11 @@ export function InstagramWall() {
     )
     return sortPostsByDate(filtered)
   }, [data.posts, activeHashtag, activeMonth, filterYear])
+
+  const masonryColumns = useMemo(
+    () => distributePostsToColumns(visiblePosts, columnCount),
+    [visiblePosts, columnCount],
+  )
 
   const setPostRef = useCallback(
     (id: string) => (el: HTMLDivElement | null) => {
@@ -168,7 +176,7 @@ export function InstagramWall() {
             className={`ig-story ${animatingPostId === post.id ? 'ig-story--active' : ''}`}
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: (i + 1) * 0.05 }}
+            transition={{ delay: (i + 1) * 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.92 }}
             onClick={() => navigateToPost(post.id)}
@@ -185,57 +193,8 @@ export function InstagramWall() {
         ))}
       </div>
 
-      <div className="ig-layout">
-        <div className="ig-main">
-          {isEditMode && (
-            <motion.button
-              className="btn-primary ig-add-post"
-              onClick={addPost}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              + Create New Post
-            </motion.button>
-          )}
-
-          <div className="ig-feed" ref={feedRef}>
-            <AnimatePresence mode="popLayout">
-              {visiblePosts.length === 0 ? (
-                <p className="ig-feed__empty">{emptyMessage}</p>
-              ) : (
-                visiblePosts.map((post) => (
-                  <motion.div
-                    key={post.id}
-                    ref={setPostRef(post.id)}
-                    className={animatingPostId === post.id ? 'post-landing' : ''}
-                    animate={
-                      animatingPostId === post.id
-                        ? {
-                            scale: [1, 1.02, 1],
-                            boxShadow: [
-                              '0 0 0 0 rgba(184, 134, 11, 0)',
-                              '0 0 0 6px rgba(184, 134, 11, 0.25)',
-                              '0 0 0 0 rgba(184, 134, 11, 0)',
-                            ],
-                          }
-                        : { scale: 1 }
-                    }
-                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    <PostCard
-                      post={post}
-                      isEditMode={isEditMode}
-                      onUpdate={updatePost}
-                      onDelete={() => deletePost(post.id)}
-                    />
-                  </motion.div>
-                ))
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        <GallerySidebar
+      <div className="ig-filter-header">
+        <GalleryFilterBar
           hashtags={allHashtags}
           activeHashtag={activeHashtag}
           onHashtagChange={setActiveHashtag}
@@ -245,6 +204,58 @@ export function InstagramWall() {
           onFilterYearChange={setFilterYear}
           monthCounts={monthCounts}
         />
+
+        {isEditMode && (
+          <motion.button
+            className="btn-primary ig-add-post"
+            onClick={addPost}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            + Create New Post
+          </motion.button>
+        )}
+      </div>
+
+      <div className="ig-feed ig-feed--masonry" ref={feedRef}>
+        <AnimatePresence mode="sync">
+          {visiblePosts.length === 0 ? (
+            <motion.p
+              key="empty"
+              className="ig-feed__empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {emptyMessage}
+            </motion.p>
+          ) : (
+            masonryColumns.map((columnPosts, columnIndex) => (
+              <div key={`column-${columnIndex}`} className="ig-feed__column">
+                {columnPosts.map((post) => (
+                  <motion.div
+                    key={post.id}
+                    ref={setPostRef(post.id)}
+                    className={`ig-feed__cell ${animatingPostId === post.id ? 'post-landing' : ''}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <PostCard
+                      post={post}
+                      isEditMode={isEditMode}
+                      onUpdate={updatePost}
+                      onDelete={() => deletePost(post.id)}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            ))
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

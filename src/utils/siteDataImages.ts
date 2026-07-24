@@ -1,8 +1,8 @@
 import type { JourneyBlock, SiteData } from '../types'
-import { resolveImageUrl } from '../services/imageUpload'
+import { isDataUrl, resolveImageUrl } from '../services/imageUpload'
 
-function newImagePath(folder: string): string {
-  return `images/${folder}/${crypto.randomUUID()}`
+function storagePath(relativePath: string): string {
+  return `images/${relativePath}`
 }
 
 async function uploadJourneyBlocks(blocks: JourneyBlock[]): Promise<JourneyBlock[]> {
@@ -10,7 +10,7 @@ async function uploadJourneyBlocks(blocks: JourneyBlock[]): Promise<JourneyBlock
   const next = await Promise.all(
     blocks.map(async (block) => {
       if (block.type === 'image') {
-        const imageUrl = await resolveImageUrl(block.imageUrl, newImagePath(`journey/${block.id}`))
+        const imageUrl = await resolveImageUrl(block.imageUrl, storagePath(`journey/${block.id}`))
         if (imageUrl === block.imageUrl) return block
         changed = true
         return { ...block, imageUrl }
@@ -18,7 +18,7 @@ async function uploadJourneyBlocks(blocks: JourneyBlock[]): Promise<JourneyBlock
       if (block.type === 'carousel') {
         const images = await Promise.all(
           block.images.map((url, index) =>
-            resolveImageUrl(url, newImagePath(`journey/${block.id}/${index}`)),
+            resolveImageUrl(url, storagePath(`journey/${block.id}/${index}`)),
           ),
         )
         if (images.every((url, index) => url === block.images[index])) return block
@@ -31,11 +31,23 @@ async function uploadJourneyBlocks(blocks: JourneyBlock[]): Promise<JourneyBlock
   return changed ? next : blocks
 }
 
+function compactFullImages(images: string[], fullImages?: string[]): string[] | undefined {
+  if (!fullImages?.length) return undefined
+
+  const compact = images.map((feed, index) => {
+    const full = fullImages[index]
+    return full && full !== feed ? full : ''
+  })
+
+  if (!compact.some(Boolean)) return undefined
+  return compact
+}
+
 /** Upload any embedded data URLs to Firebase Storage before persisting site data. */
 export async function uploadEmbeddedImages(data: SiteData): Promise<SiteData> {
   const teamCarouselImages = await Promise.all(
     data.teamCarouselImages.map((url, index) =>
-      resolveImageUrl(url, newImagePath(`carousel/${index}`)),
+      resolveImageUrl(url, storagePath(`carousel/${index}`)),
     ),
   )
 
@@ -43,11 +55,11 @@ export async function uploadEmbeddedImages(data: SiteData): Promise<SiteData> {
     data.leaders.map(async (leader) => {
       const profilePicUrl = await resolveImageUrl(
         leader.profilePicUrl,
-        newImagePath(`leaders/${leader.id}/profile`),
+        storagePath(`leaders/${leader.id}/profile`),
       )
       const largeImageUrl = await resolveImageUrl(
         leader.largeImageUrl,
-        newImagePath(`leaders/${leader.id}/hero`),
+        storagePath(`leaders/${leader.id}/hero`),
       )
       if (profilePicUrl === leader.profilePicUrl && largeImageUrl === leader.largeImageUrl) {
         return leader
@@ -59,11 +71,32 @@ export async function uploadEmbeddedImages(data: SiteData): Promise<SiteData> {
   const posts = await Promise.all(
     data.posts.map(async (post) => {
       const images = await Promise.all(
-        post.images.map((url, index) => resolveImageUrl(url, newImagePath(`posts/${post.id}/${index}`)),
-        ),
+        post.images.map((url, index) => {
+          if (!isDataUrl(url)) return url
+          return resolveImageUrl(url, storagePath(`posts/${post.id}/${index}-feed`))
+        }),
       )
-      if (images.every((url, index) => url === post.images[index])) return post
-      return { ...post, images }
+
+      const sourceFull = post.fullImages
+      let fullImages = sourceFull
+      if (sourceFull?.length) {
+        fullImages = await Promise.all(
+          sourceFull.map((url, index) => {
+            const feedSource = post.images[index]
+            if (!url || url === feedSource) return url
+            if (!isDataUrl(url)) return url
+            return resolveImageUrl(url, storagePath(`posts/${post.id}/${index}-full`))
+          }),
+        )
+      }
+
+      const compactedFull = compactFullImages(images, fullImages)
+      const imagesChanged = images.some((url, index) => url !== post.images[index])
+      const fullChanged =
+        JSON.stringify(compactedFull ?? null) !== JSON.stringify(post.fullImages ?? null)
+
+      if (!imagesChanged && !fullChanged) return post
+      return { ...post, images, fullImages: compactedFull }
     }),
   )
 

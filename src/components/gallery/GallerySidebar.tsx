@@ -1,7 +1,7 @@
 import type { GalleryPost } from '../../types'
 import { getMonthLabels } from '../../utils/postDates'
 
-interface GallerySidebarProps {
+interface GalleryFilterBarProps {
   hashtags: string[]
   activeHashtag: string | null
   onHashtagChange: (tag: string | null) => void
@@ -12,7 +12,7 @@ interface GallerySidebarProps {
   monthCounts: number[]
 }
 
-export function GallerySidebar({
+export function GalleryFilterBar({
   hashtags,
   activeHashtag,
   onHashtagChange,
@@ -21,7 +21,7 @@ export function GallerySidebar({
   filterYear,
   onFilterYearChange,
   monthCounts,
-}: GallerySidebarProps) {
+}: GalleryFilterBarProps) {
   const monthLabels = getMonthLabels()
   const hasFilters = activeHashtag !== null || activeMonth !== null
 
@@ -31,21 +31,21 @@ export function GallerySidebar({
   }
 
   return (
-    <aside className="ig-sidebar" aria-label="Gallery filters">
-      <div className="ig-sidebar__panel">
-        <div className="ig-sidebar__header">
-          <h2 className="ig-sidebar__title">Filters</h2>
+    <header className="ig-filter-bar" aria-label="Gallery filters">
+      <div className="ig-filter-bar__row ig-filter-bar__row--top">
+        <div className="ig-filter-bar__heading">
+          <h2 className="ig-filter-bar__title">Filters</h2>
           {hasFilters && (
-            <button type="button" className="ig-sidebar__clear" onClick={clearFilters}>
+            <button type="button" className="ig-filter-bar__clear" onClick={clearFilters}>
               Clear
             </button>
           )}
         </div>
 
         {hashtags.length > 0 && (
-          <section className="ig-sidebar__section">
-            <h3 className="ig-sidebar__label">Hashtags</h3>
-            <div className="ig-sidebar__hashtags">
+          <div className="ig-filter-bar__hashtags">
+            <span className="ig-filter-bar__label">Hashtags</span>
+            <div className="ig-filter-bar__chip-scroll">
               <button
                 type="button"
                 className={`ig-hashtag-chip ${activeHashtag === null ? 'ig-hashtag-chip--active' : ''}`}
@@ -72,59 +72,59 @@ export function GallerySidebar({
                 </button>
               ))}
             </div>
-          </section>
+          </div>
         )}
-
-        <section className="ig-sidebar__section">
-          <div className="ig-sidebar__month-header">
-            <h3 className="ig-sidebar__label">By month</h3>
-            <div className="ig-sidebar__year">
-              <button
-                type="button"
-                className="ig-sidebar__year-btn"
-                onClick={() => onFilterYearChange(filterYear - 1)}
-                aria-label="Previous year"
-              >
-                ‹
-              </button>
-              <span className="ig-sidebar__year-label">{filterYear}</span>
-              <button
-                type="button"
-                className="ig-sidebar__year-btn"
-                onClick={() => onFilterYearChange(filterYear + 1)}
-                aria-label="Next year"
-              >
-                ›
-              </button>
-            </div>
-          </div>
-
-          <div className="ig-month-grid">
-            {monthLabels.map((label, index) => {
-              const month = index + 1
-              const count = monthCounts[index]
-              const isActive = activeMonth === month
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  className={`ig-month-chip ${isActive ? 'ig-month-chip--active' : ''} ${
-                    count === 0 ? 'ig-month-chip--empty' : ''
-                  }`}
-                  onClick={() => onMonthChange(isActive ? null : month)}
-                  aria-pressed={isActive}
-                >
-                  <span className="ig-month-chip__label">{label}</span>
-                  <span className="ig-month-chip__count">{count}</span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
       </div>
-    </aside>
+
+      <div className="ig-filter-bar__row ig-filter-bar__row--months">
+        <span className="ig-filter-bar__label">By month</span>
+        <div className="ig-filter-bar__year">
+          <button
+            type="button"
+            className="ig-filter-bar__year-btn"
+            onClick={() => onFilterYearChange(filterYear - 1)}
+            aria-label="Previous year"
+          >
+            ‹
+          </button>
+          <span className="ig-filter-bar__year-label">{filterYear}</span>
+          <button
+            type="button"
+            className="ig-filter-bar__year-btn"
+            onClick={() => onFilterYearChange(filterYear + 1)}
+            aria-label="Next year"
+          >
+            ›
+          </button>
+        </div>
+        <div className="ig-filter-bar__month-scroll">
+          {monthLabels.map((label, index) => {
+            const month = index + 1
+            const count = monthCounts[index]
+            const isActive = activeMonth === month
+            return (
+              <button
+                key={label}
+                type="button"
+                className={`ig-month-chip ig-month-chip--compact ${isActive ? 'ig-month-chip--active' : ''} ${
+                  count === 0 ? 'ig-month-chip--empty' : ''
+                }`}
+                onClick={() => onMonthChange(isActive ? null : month)}
+                aria-pressed={isActive}
+              >
+                <span className="ig-month-chip__label">{label}</span>
+                <span className="ig-month-chip__count">{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </header>
   )
 }
+
+/** @deprecated use GalleryFilterBar */
+export const GallerySidebar = GalleryFilterBar
 
 export function sortPostsByDate(posts: GalleryPost[]): GalleryPost[] {
   return [...posts].sort((a, b) => {

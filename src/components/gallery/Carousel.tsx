@@ -3,11 +3,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { ModalPortal } from '../ModalPortal'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import type { PostAspectRatio, PostImageMeta } from '../../types'
-import { DEFAULT_IMAGE_META, DEFAULT_POST_ASPECT_RATIO, getAspectRatioWidthFactor } from '../../utils/postImages'
+import {
+  DEFAULT_IMAGE_META,
+  DEFAULT_POST_ASPECT_RATIO,
+  getAspectRatioWidthFactor,
+  getPostImageFullUrl,
+} from '../../utils/postImages'
+import { preloadImageSources } from '../../utils/imagePresets'
 import { CroppedImage } from './CroppedImage'
 
 interface CarouselProps {
   images: string[]
+  fullImages?: string[]
   imageMeta?: PostImageMeta[]
   aspectRatio?: PostAspectRatio
   postId: string
@@ -15,6 +22,7 @@ interface CarouselProps {
 
 interface CarouselStageProps {
   images: string[]
+  fullImages?: string[]
   metas: PostImageMeta[]
   aspectRatio: PostAspectRatio
   postId: string
@@ -25,6 +33,7 @@ interface CarouselStageProps {
   className?: string
   onFullscreen?: () => void
   fitViewport?: boolean
+  useFullResolution?: boolean
 }
 
 const slideVariants = {
@@ -35,6 +44,7 @@ const slideVariants = {
 
 function CarouselStage({
   images,
+  fullImages,
   metas,
   aspectRatio,
   postId,
@@ -45,8 +55,14 @@ function CarouselStage({
   className = '',
   onFullscreen,
   fitViewport = false,
+  useFullResolution = false,
 }: CarouselStageProps) {
   const widthFactor = getAspectRatioWidthFactor(aspectRatio)
+  const feedSrc = images[index] ?? ''
+  const displaySrc = useFullResolution
+    ? getPostImageFullUrl({ images, fullImages }, index)
+    : feedSrc
+
   const stageStyle: React.CSSProperties = fitViewport
     ? {
         aspectRatio,
@@ -57,16 +73,16 @@ function CarouselStage({
 
   return (
     <div className={`carousel ${className}`.trim()} style={stageStyle}>
-      <AnimatePresence mode="popLayout" custom={direction}>
+      <AnimatePresence mode="wait" custom={direction}>
         <motion.div
-          key={`${postId}-${index}`}
+          key={`${postId}-${index}-${useFullResolution ? 'full' : 'feed'}`}
           className="carousel__slide"
           custom={direction}
           variants={slideVariants}
           initial="enter"
           animate="center"
           exit="exit"
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           drag={images.length > 1 ? 'x' : false}
           dragConstraints={{ left: 0, right: 0 }}
           dragElastic={0.2}
@@ -76,7 +92,7 @@ function CarouselStage({
           }}
         >
           <CroppedImage
-            src={images[index]}
+            src={displaySrc}
             meta={metas[index]}
             aspectRatio={aspectRatio}
             className="carousel__cropped"
@@ -144,6 +160,7 @@ function CarouselStage({
 
 export function Carousel({
   images,
+  fullImages,
   imageMeta,
   aspectRatio = DEFAULT_POST_ASPECT_RATIO,
   postId,
@@ -177,6 +194,15 @@ export function Carousel({
     [index],
   )
 
+  const openLightbox = useCallback(() => {
+    if (fullImages?.some(Boolean)) {
+      preloadImageSources(
+        images.map((_, i) => getPostImageFullUrl({ images, fullImages }, i)),
+      )
+    }
+    setLightboxOpen(true)
+  }, [fullImages, images])
+
   useEffect(() => {
     setIndex(0)
   }, [postId])
@@ -204,6 +230,7 @@ export function Carousel({
 
   const stageProps = {
     images,
+    fullImages,
     metas,
     aspectRatio,
     postId,
@@ -215,7 +242,7 @@ export function Carousel({
 
   return (
     <>
-      <CarouselStage {...stageProps} onFullscreen={() => setLightboxOpen(true)} />
+      <CarouselStage {...stageProps} onFullscreen={openLightbox} />
 
       <ModalPortal>
         <AnimatePresence>
@@ -244,13 +271,18 @@ export function Carousel({
 
               <motion.div
                 className="carousel-lightbox__content"
-                initial={{ opacity: 0, scale: 0.94 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <CarouselStage {...stageProps} className="carousel--lightbox" fitViewport />
+                <CarouselStage
+                  {...stageProps}
+                  className="carousel--lightbox"
+                  fitViewport
+                  useFullResolution
+                />
               </motion.div>
             </motion.div>
           )}

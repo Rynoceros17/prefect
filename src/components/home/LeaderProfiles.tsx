@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { LeaderProfile } from '../../types'
 import { roleToSlug, sortLeadersForDisplay } from '../../utils/leaders'
+import { HomeImage } from './HomeImage'
 
 interface LeaderProfilesProps {
   leaders: LeaderProfile[]
@@ -26,7 +27,7 @@ export function LeaderProfiles({ leaders, onSelectLeader }: LeaderProfilesProps)
           >
             <div className="leader-card__orbit" />
             <div className="leader-card__image-wrap">
-              <img src={leader.profilePicUrl} alt={leader.name} />
+              <HomeImage src={leader.profilePicUrl} alt={leader.name} />
             </div>
             <span className="leader-card__role">{leader.role}</span>
             <h3>{leader.name}</h3>

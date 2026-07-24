@@ -4,7 +4,9 @@ import { ModalPortal } from '../ModalPortal'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import type { LeaderProfile } from '../../types'
 import { uploadImageFromFile } from '../../services/imageUpload'
+import { heroPortraitUploadOptions, thumbUploadOptions } from '../../utils/imagePresets'
 import { LEADERSHIP_ROLES, roleToSlug } from '../../utils/leaders'
+import { HomeImage } from './HomeImage'
 
 interface LeaderModalProps {
   leader: LeaderProfile | null
@@ -26,18 +28,17 @@ export function LeaderModal({ leader, onClose, isEditMode, onSave, onDelete }: L
   if (!leader || !draft) return null
 
   const handleImageUpload =
-    (field: 'profilePicUrl' | 'largeImageUrl', maxSize: number) =>
+    (field: 'profilePicUrl' | 'largeImageUrl') =>
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
       try {
+        const options =
+          field === 'profilePicUrl' ? thumbUploadOptions() : heroPortraitUploadOptions()
         const dataUrl = await uploadImageFromFile(
           file,
           `images/leaders/${draft.id}/${field === 'profilePicUrl' ? 'profile' : 'hero'}-${crypto.randomUUID()}`,
-          {
-            maxWidth: maxSize,
-            maxHeight: maxSize,
-          },
+          options,
         )
         setDraft((current) => (current ? { ...current, [field]: dataUrl } : current))
       } catch {
@@ -79,10 +80,11 @@ export function LeaderModal({ leader, onClose, isEditMode, onSave, onDelete }: L
               transition={{ delay: 0.15 }}
             >
               <div className="leader-modal__large-wrap">
-                <img
+                <HomeImage
                   src={draft.largeImageUrl}
                   alt={draft.name}
                   className="leader-modal__large-image"
+                  priority
                 />
                 {isEditMode && (
                   <label className="image-upload-overlay">
@@ -91,14 +93,14 @@ export function LeaderModal({ leader, onClose, isEditMode, onSave, onDelete }: L
                       type="file"
                       accept="image/*"
                       hidden
-                      onChange={handleImageUpload('largeImageUrl', 1200)}
+                      onChange={handleImageUpload('largeImageUrl')}
                     />
                   </label>
                 )}
               </div>
 
               <div className="leader-modal__profile-wrap">
-                <img
+                <HomeImage
                   src={draft.profilePicUrl}
                   alt=""
                   className="leader-modal__profile-image"
@@ -110,7 +112,7 @@ export function LeaderModal({ leader, onClose, isEditMode, onSave, onDelete }: L
                       type="file"
                       accept="image/*"
                       hidden
-                      onChange={handleImageUpload('profilePicUrl', 600)}
+                      onChange={handleImageUpload('profilePicUrl')}
                     />
                   </label>
                 )}

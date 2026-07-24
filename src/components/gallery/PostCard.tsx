@@ -1,8 +1,8 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { GALLERY_USERNAME } from '../../data/gallery'
 import type { GalleryPost, PostAspectRatio, PostImageMeta } from '../../types'
-import { uploadImageFromFile } from '../../services/imageUpload'
+import { uploadGalleryImagePair } from '../../services/imageUpload'
 import { downloadPostImages } from '../../utils/downloadImages'
 import {
   formatPostDate,
@@ -12,8 +12,13 @@ import {
 import {
   ASPECT_RATIO_OPTIONS,
   DEFAULT_POST_ASPECT_RATIO,
+  compactPostFullImages,
+  getPostDownloadUrls,
+  mergePostFullImages,
   normalizeImageMeta,
+  removePostImageAt,
   reorderImages,
+  reorderPostImages,
 } from '../../utils/postImages'
 import { Caption } from './Caption'
 import { Carousel } from './Carousel'
@@ -38,8 +43,17 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
   const imageMeta = normalizeImageMeta(post.images, post.imageMeta)
   const aspectRatio = post.aspectRatio ?? DEFAULT_POST_ASPECT_RATIO
 
-  const updateWithMeta = (images: string[], meta: PostImageMeta[]) => {
-    onUpdate({ ...post, images, imageMeta: meta })
+  const updateWithMeta = (
+    images: string[],
+    meta: PostImageMeta[],
+    fullImages?: string[],
+  ) => {
+    onUpdate({
+      ...post,
+      images,
+      fullImages: fullImages ?? post.fullImages,
+      imageMeta: meta,
+    })
   }
 
   const handleLike = () => {
@@ -73,32 +87,42 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
     const remaining = 20 - post.images.length
     const toAdd = files.slice(0, remaining)
     try {
-      const dataUrls = await Promise.all(
-        toAdd.map((file) =>
-          uploadImageFromFile(file, `images/posts/${post.id}/${crypto.randomUUID()}`, {
-            maxWidth: 1200,
-            maxHeight: 1200,
-          }),
-        ),
+      const pairs = await Promise.all(toAdd.map((file) => uploadGalleryImagePair(file, post.id)))
+      const feedUrls = pairs.map((pair) => pair.feed)
+      const fullUrls = pairs.map((pair) => pair.full)
+      const images = [...post.images, ...feedUrls].slice(0, 20)
+      const fullImages = mergePostFullImages(images, post.fullImages, fullUrls)
+      updateWithMeta(
+        images,
+        normalizeImageMeta(images, [
+          ...imageMeta,
+          ...feedUrls.map(() => ({ panX: 0, panY: 0, zoom: 1 })),
+        ]),
+        fullImages,
       )
-      const images = [...post.images, ...dataUrls].slice(0, 20)
-      updateWithMeta(images, normalizeImageMeta(images, [...imageMeta, ...dataUrls.map(() => ({ panX: 0, panY: 0, zoom: 1 }))]))
     } catch {
       window.alert('Could not process one or more images. Try smaller files.')
     }
+    e.target.value = ''
   }
 
   const handleReorder = (from: number, to: number) => {
-    updateWithMeta(
-      reorderImages(post.images, from, to),
-      reorderImages(imageMeta, from, to),
-    )
+    const next = reorderPostImages(post.images, post.fullImages, from, to)
+    onUpdate({
+      ...post,
+      images: next.images,
+      fullImages: compactPostFullImages(next.images, next.fullImages),
+      imageMeta: reorderImages(imageMeta, from, to),
+    })
   }
 
   const handleRemoveImage = (index: number) => {
-    const images = post.images.filter((_, i) => i !== index)
-    const meta = imageMeta.filter((_, i) => i !== index)
-    updateWithMeta(images, meta)
+    const next = removePostImageAt(post.images, post.fullImages, index)
+    updateWithMeta(
+      next.images,
+      imageMeta.filter((_, i) => i !== index),
+      compactPostFullImages(next.images, next.fullImages),
+    )
   }
 
   const handleCropSave = (index: number, meta: PostImageMeta) => {
@@ -110,7 +134,7 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
   const handleDownload = async () => {
     if (!post.images.length) return
     try {
-      await downloadPostImages(post.id, post.images)
+      await downloadPostImages(post.id, getPostDownloadUrls(post))
       setDownloadToast(true)
       window.setTimeout(() => setDownloadToast(false), 2000)
     } catch {
@@ -123,14 +147,7 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
   }
 
   return (
-    <motion.article
-      ref={postRef}
-      className="post-card"
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-    >
+    <article ref={postRef} className="post-card">
       <div className="post-card__header">
         <ProfileAvatar size="sm" />
         <div className="post-card__header-text">
@@ -156,12 +173,15 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
         {post.pinned && <span className="post-card__pinned" title="Pinned">📌</span>}
       </div>
 
-      <Carousel
-        images={post.images}
-        imageMeta={imageMeta}
-        aspectRatio={aspectRatio}
-        postId={post.id}
-      />
+      <div className="post-card__media">
+        <Carousel
+          images={post.images}
+          fullImages={post.fullImages}
+          imageMeta={imageMeta}
+          aspectRatio={aspectRatio}
+          postId={post.id}
+        />
+      </div>
 
       <div className="post-card__actions">
         <div className="post-card__actions-left">
@@ -301,6 +321,6 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
           onClose={() => setCropIndex(null)}
         />
       )}
-    </motion.article>
+    </article>
   )
 }

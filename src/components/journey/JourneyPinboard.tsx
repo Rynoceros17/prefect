@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { JourneyBlock, JourneyBlockLayout, JourneyPlanetPage, JourneySpaceIconKind, JourneyTextBlock } from '../../types'
+import { feedUploadOptions } from '../../utils/imagePresets'
 import { uploadImageFromFile } from '../../services/imageUpload'
 import {
   createCarouselBlock,
@@ -187,10 +188,7 @@ export function JourneyPinboard({
         Array.from(files)
           .slice(0, multi ? 8 : 1)
           .map((f) =>
-            uploadImageFromFile(f, `images/journey/${blockId}/${crypto.randomUUID()}`, {
-              maxWidth: 1400,
-              maxHeight: 1000,
-            }),
+            uploadImageFromFile(f, `images/journey/${blockId}/${crypto.randomUUID()}`, feedUploadOptions()),
           ),
       )
       const block = blocks.find((b) => b.id === blockId)

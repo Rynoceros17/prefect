@@ -101,6 +101,7 @@ export function migrateSiteData(parsed: Partial<SiteData>): SiteData {
     journey: normalizeJourneyData(parsed.journey ?? DEFAULT_SITE_DATA.journey),
     posts: (parsed.posts ?? DEFAULT_SITE_DATA.posts).map((post, index) => ({
       ...post,
+      fullImages: post.fullImages?.length ? post.fullImages : undefined,
       createdAt: post.createdAt ?? new Date(Date.now() - index * 86400000).toISOString(),
     })),
   }
