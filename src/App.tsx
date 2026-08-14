@@ -10,7 +10,6 @@ import { ConnectionsPage } from './pages/ConnectionsPage'
 import { GamesPage } from './pages/GamesPage'
 import { JourneyPage } from './pages/JourneyPage'
 import { TheatrePage } from './pages/TheatrePage'
-import { PageViewsProvider } from './context/PageViewsContext'
 
 export default function App() {
   return (
@@ -19,18 +18,16 @@ export default function App() {
         <SiteAccessGuard>
           <EditModeProvider>
             <BrowserRouter>
-              <PageViewsProvider>
-                <Routes>
-                  <Route element={<Layout />}>
-                    <Route index element={<HomePage />} />
-                    <Route path="theatre" element={<TheatrePage />} />
-                    <Route path="gallery" element={<GalleryPage />} />
-                    <Route path="journey" element={<JourneyPage />} />
-                    <Route path="games" element={<GamesPage />} />
-                    <Route path="games/connections" element={<ConnectionsPage />} />
-                  </Route>
-                </Routes>
-              </PageViewsProvider>
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="theatre" element={<TheatrePage />} />
+                  <Route path="gallery" element={<GalleryPage />} />
+                  <Route path="journey" element={<JourneyPage />} />
+                  <Route path="games" element={<GamesPage />} />
+                  <Route path="games/connections" element={<ConnectionsPage />} />
+                </Route>
+              </Routes>
             </BrowserRouter>
           </EditModeProvider>
         </SiteAccessGuard>
