@@ -1,0 +1,203 @@
+import type {
+  ConnectionsCategory,
+  ConnectionsGameState,
+  ConnectionsPuzzle,
+  ConnectionsSolvedGroup,
+} from '../types/connections'
+import { CONNECTIONS_MAX_MISTAKES } from '../types/connections'
+
+function shuffleArray<T>(items: T[]): T[] {
+  const next = [...items]
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[next[i], next[j]] = [next[j], next[i]]
+  }
+  return next
+}
+
+export function getAllPuzzleWords(puzzle: ConnectionsPuzzle): string[] {
+  return puzzle.categories.flatMap((category) => category.words)
+}
+
+export function createConnectionsGameState(puzzle: ConnectionsPuzzle): ConnectionsGameState {
+  return {
+    remaining: shuffleArray(getAllPuzzleWords(puzzle)),
+    solved: [],
+    selected: [],
+    mistakes: 0,
+    status: 'playing',
+    wrongGuessKeys: new Set(),
+    message: null,
+    shaking: false,
+    revealedRemaining: false,
+  }
+}
+
+export function guessKey(words: string[]): string {
+  return [...words].sort().join('|')
+}
+
+export function findMatchingCategory(
+  words: string[],
+  puzzle: ConnectionsPuzzle,
+  solved: ConnectionsSolvedGroup[],
+): ConnectionsCategory | null {
+  const solvedTitles = new Set(solved.map((group) => group.category.title))
+  const match = puzzle.categories.find((category) => {
+    if (solvedTitles.has(category.title)) return false
+    return words.every((word) => category.words.includes(word as (typeof category.words)[number]))
+  })
+  return match ?? null
+}
+
+export function maxWordsSharingCategory(words: string[], puzzle: ConnectionsPuzzle): number {
+  let max = 0
+  for (const category of puzzle.categories) {
+    const count = words.filter((word) => category.words.includes(word as (typeof category.words)[number])).length
+    max = Math.max(max, count)
+  }
+  return max
+}
+
+export function isOneAway(words: string[], puzzle: ConnectionsPuzzle): boolean {
+  return words.length === 4 && maxWordsSharingCategory(words, puzzle) === 3
+}
+
+export function toggleWordSelection(state: ConnectionsGameState, word: string): ConnectionsGameState {
+  if (state.status !== 'playing') return state
+
+  const selected = state.selected.includes(word)
+    ? state.selected.filter((item) => item !== word)
+    : state.selected.length < 4
+      ? [...state.selected, word]
+      : state.selected
+
+  return {
+    ...state,
+    selected,
+    message: null,
+    shaking: false,
+  }
+}
+
+export function deselectAll(state: ConnectionsGameState): ConnectionsGameState {
+  if (state.status !== 'playing') return state
+  return { ...state, selected: [], message: null }
+}
+
+export function shuffleRemaining(state: ConnectionsGameState): ConnectionsGameState {
+  if (state.status !== 'playing' || state.remaining.length <= 1) return state
+  return {
+    ...state,
+    remaining: shuffleArray(state.remaining),
+    selected: [],
+    message: null,
+  }
+}
+
+function withSolvedGroup(
+  state: ConnectionsGameState,
+  category: ConnectionsCategory,
+  words: string[],
+): ConnectionsGameState {
+  const remaining = state.remaining.filter((word) => !words.includes(word))
+  const solved = [...state.solved, { category, words }]
+  const won = remaining.length === 0
+
+  return {
+    ...state,
+    remaining,
+    solved,
+    selected: [],
+    message: won ? 'Perfect!' : null,
+    status: won ? 'won' : state.status,
+    shaking: false,
+  }
+}
+
+function withWrongGuess(
+  state: ConnectionsGameState,
+  key: string,
+  puzzle: ConnectionsPuzzle,
+  words: string[],
+  alreadyGuessed: boolean,
+): ConnectionsGameState {
+  const mistakes = alreadyGuessed ? state.mistakes : state.mistakes + 1
+  const lost = mistakes >= CONNECTIONS_MAX_MISTAKES
+  const wrongGuessKeys = new Set(state.wrongGuessKeys)
+  wrongGuessKeys.add(key)
+
+  let message = 'Try again.'
+  if (isOneAway(words, puzzle)) message = 'One away…'
+  if (alreadyGuessed) message = 'Already guessed!'
+
+  return {
+    ...state,
+    mistakes,
+    selected: [],
+    message,
+    shaking: !alreadyGuessed,
+    status: lost ? 'lost' : state.status,
+    wrongGuessKeys,
+    revealedRemaining: lost ? true : state.revealedRemaining,
+  }
+}
+
+export function submitSelection(
+  state: ConnectionsGameState,
+  puzzle: ConnectionsPuzzle,
+): ConnectionsGameState {
+  if (state.status !== 'playing' || state.selected.length !== 4) return state
+
+  const words = [...state.selected]
+  const key = guessKey(words)
+  const alreadyGuessed = state.wrongGuessKeys.has(key)
+  const category = findMatchingCategory(words, puzzle, state.solved)
+
+  if (category) {
+    return withSolvedGroup(state, category, words)
+  }
+
+  return withWrongGuess(state, key, puzzle, words, alreadyGuessed)
+}
+
+export function revealRemainingGroups(
+  state: ConnectionsGameState,
+  puzzle: ConnectionsPuzzle,
+): ConnectionsGameState {
+  if (state.revealedRemaining) return state
+
+  const solvedTitles = new Set(state.solved.map((group) => group.category.title))
+  const unsolved = puzzle.categories
+    .filter((category) => !solvedTitles.has(category.title))
+    .sort((a, b) => a.difficulty - b.difficulty)
+    .map((category) => ({
+      category,
+      words: [...category.words],
+    }))
+
+  return {
+    ...state,
+    solved: [...state.solved, ...unsolved],
+    remaining: [],
+    revealedRemaining: true,
+    selected: [],
+    message: null,
+  }
+}
+
+export function buildShareText(puzzle: ConnectionsPuzzle, state: ConnectionsGameState): string {
+  const lines = state.solved.map((group) => {
+    const color =
+      group.category.difficulty === 0
+        ? '🟨'
+        : group.category.difficulty === 1
+          ? '🟩'
+          : group.category.difficulty === 2
+            ? '🟦'
+            : '🟪'
+    return color.repeat(4)
+  })
+
+  return [`Prefect Connections #${puzzle.number}`, ...lines, `${state.mistakes} mistakes`].join('\n')
+}

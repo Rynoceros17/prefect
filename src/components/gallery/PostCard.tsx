@@ -48,12 +48,11 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
     meta: PostImageMeta[],
     fullImages?: string[],
   ) => {
-    onUpdate({
-      ...post,
-      images,
-      fullImages: fullImages ?? post.fullImages,
-      imageMeta: meta,
-    })
+    const next: GalleryPost = { ...post, images, imageMeta: meta }
+    const resolvedFull = fullImages ?? post.fullImages
+    if (resolvedFull?.length) next.fullImages = resolvedFull
+    else delete next.fullImages
+    onUpdate(next)
   }
 
   const handleLike = () => {
@@ -108,12 +107,15 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
 
   const handleReorder = (from: number, to: number) => {
     const next = reorderPostImages(post.images, post.fullImages, from, to)
-    onUpdate({
+    const updated: GalleryPost = {
       ...post,
       images: next.images,
-      fullImages: compactPostFullImages(next.images, next.fullImages),
       imageMeta: reorderImages(imageMeta, from, to),
-    })
+    }
+    const compactedFull = compactPostFullImages(next.images, next.fullImages)
+    if (compactedFull?.length) updated.fullImages = compactedFull
+    else delete updated.fullImages
+    onUpdate(updated)
   }
 
   const handleRemoveImage = (index: number) => {

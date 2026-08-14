@@ -50,6 +50,7 @@ export interface NavEmojis {
   theatre: string
   gallery: string
   journey: string
+  games: string
   /** @deprecated migrated to homepage */
   leaders?: string
 }

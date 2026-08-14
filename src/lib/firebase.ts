@@ -22,6 +22,7 @@ export function isFirebaseConfigured(): boolean {
 }
 
 export const FIRESTORE_SITE_PATH = import.meta.env.VITE_FIRESTORE_SITE_PATH ?? 'site/main'
+export const FIRESTORE_STATS_PATH = import.meta.env.VITE_FIRESTORE_STATS_PATH ?? 'site/stats'
 
 let app: FirebaseApp | null = null
 let db: Firestore | null = null

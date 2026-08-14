@@ -68,6 +68,7 @@ function migrateNavEmojis(navEmojis?: Partial<NavEmojis>): NavEmojis {
     theatre: navEmojis?.theatre ?? DEFAULT_SITE_DATA.navEmojis.theatre,
     gallery: navEmojis?.gallery ?? DEFAULT_SITE_DATA.navEmojis.gallery,
     journey: navEmojis?.journey ?? DEFAULT_SITE_DATA.navEmojis.journey,
+    games: navEmojis?.games ?? DEFAULT_SITE_DATA.navEmojis.games,
   }
 }
 
@@ -99,11 +100,18 @@ export function migrateSiteData(parsed: Partial<SiteData>): SiteData {
       parsed.theatreGridVideos ?? DEFAULT_SITE_DATA.theatreGridVideos,
     ),
     journey: normalizeJourneyData(parsed.journey ?? DEFAULT_SITE_DATA.journey),
-    posts: (parsed.posts ?? DEFAULT_SITE_DATA.posts).map((post, index) => ({
-      ...post,
-      fullImages: post.fullImages?.length ? post.fullImages : undefined,
-      createdAt: post.createdAt ?? new Date(Date.now() - index * 86400000).toISOString(),
-    })),
+    posts: (parsed.posts ?? DEFAULT_SITE_DATA.posts).map((post, index) => {
+      const next = {
+        ...post,
+        createdAt: post.createdAt ?? new Date(Date.now() - index * 86400000).toISOString(),
+      }
+      if (post.fullImages?.length) {
+        next.fullImages = post.fullImages
+      } else {
+        delete next.fullImages
+      }
+      return next
+    }),
   }
 }
 

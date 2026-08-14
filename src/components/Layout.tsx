@@ -21,23 +21,26 @@ export function Layout() {
   const isGallery = location.pathname === '/gallery'
   const isHomepage = location.pathname === '/'
   const isJourney = location.pathname === '/journey'
+  const isGames = location.pathname.startsWith('/games')
 
   useEffect(() => {
     document.body.classList.toggle('body--gallery', isGallery)
     document.body.classList.toggle('body--homepage', isHomepage)
     document.body.classList.toggle('body--journey', isJourney)
+    document.body.classList.toggle('body--games', isGames)
     document.body.classList.toggle('body--edit-mode', isEditMode)
     return () => {
       document.body.classList.remove('body--gallery')
       document.body.classList.remove('body--homepage')
       document.body.classList.remove('body--journey')
+      document.body.classList.remove('body--games')
       document.body.classList.remove('body--edit-mode')
     }
-  }, [isGallery, isHomepage, isJourney, isEditMode])
+  }, [isGallery, isHomepage, isJourney, isGames, isEditMode])
 
   return (
     <div
-      className={`app ${isGallery ? 'app--gallery' : ''} ${isHomepage ? 'app--homepage' : ''} ${isJourney ? 'app--journey' : ''} ${isEditMode ? 'app--edit-mode' : ''}`}
+      className={`app ${isGallery ? 'app--gallery' : ''} ${isHomepage ? 'app--homepage' : ''} ${isJourney ? 'app--journey' : ''} ${isGames ? 'app--games' : ''} ${isEditMode ? 'app--edit-mode' : ''}`}
     >
       <div className="app__bg">
         <div className="app__bg-orb app__bg-orb--1" />
@@ -72,7 +75,7 @@ export function Layout() {
         </AnimatePresence>
       </main>
 
-      {!isGallery && !isJourney && (
+      {!isGallery && !isJourney && !isGames && (
         <footer className="footer">
           <motion.p
             initial={{ opacity: 0 }}

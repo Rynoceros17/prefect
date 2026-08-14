@@ -174,6 +174,7 @@ export const DEFAULT_SITE_DATA: SiteData = {
     theatre: '🎭',
     gallery: '📸',
     journey: '🚀',
+    games: '🎮',
   },
 }
 

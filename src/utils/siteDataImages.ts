@@ -96,7 +96,11 @@ export async function uploadEmbeddedImages(data: SiteData): Promise<SiteData> {
         JSON.stringify(compactedFull ?? null) !== JSON.stringify(post.fullImages ?? null)
 
       if (!imagesChanged && !fullChanged) return post
-      return { ...post, images, fullImages: compactedFull }
+
+      const next = { ...post, images }
+      if (compactedFull) next.fullImages = compactedFull
+      else delete next.fullImages
+      return next
     }),
   )
 

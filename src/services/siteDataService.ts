@@ -11,6 +11,7 @@ import type { SiteData } from '../types'
 import { migrateSiteData } from '../utils/migrateSiteData'
 import { deleteStorageImages } from '../services/imageUpload'
 import { collectSiteImageUrls, findOrphanedImageUrls } from '../utils/siteImageUrls'
+import { sanitizeForFirestore } from '../utils/firestoreSanitize'
 import { uploadEmbeddedImages } from '../utils/siteDataImages'
 import { normalizeVideoRelease } from '../utils/videoRelease'
 import { FIRESTORE_SITE_PATH, getFirebaseDb, isFirebaseConfigured } from '../lib/firebase'
@@ -70,7 +71,8 @@ export async function saveSiteData(data: SiteData): Promise<{ updatedAtMs: numbe
   if (!isFirebaseConfigured()) return { updatedAtMs: 0, content: data }
 
   const previous = await fetchSiteData()
-  const content = await uploadEmbeddedImages(data)
+  const uploaded = await uploadEmbeddedImages(data)
+  const content = sanitizeForFirestore(uploaded)
   const updatedAtMs = Date.now()
 
   await setDoc(

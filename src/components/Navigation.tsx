@@ -11,6 +11,7 @@ const navItems: { to: string; label: string; key: NavKey }[] = [
   { to: '/', label: 'Homepage', key: 'homepage' },
   { to: '/theatre', label: 'Featured Prefect Videos', key: 'theatre' },
   { to: '/gallery', label: 'Gallery', key: 'gallery' },
+  { to: '/games', label: 'Prefect Games', key: 'games' },
 ]
 
 export function Navigation() {
@@ -41,7 +42,8 @@ export function Navigation() {
       >
         <div className="sidebar__track">
           {navItems.map((item) => {
-            const isActive = pathname === item.to
+            const isActive =
+              item.to === '/games' ? pathname.startsWith('/games') : pathname === item.to
 
             if (isEditMode) {
               return (
@@ -75,9 +77,12 @@ export function Navigation() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={({ isActive: active }) =>
-                  `sidebar__link ${active ? 'sidebar__link--active' : ''}`
-                }
+                end={item.to === '/'}
+                className={() => {
+                  const active =
+                    item.to === '/games' ? pathname.startsWith('/games') : pathname === item.to
+                  return `sidebar__link ${active ? 'sidebar__link--active' : ''}`
+                }}
                 title={item.label}
               >
                 <span className="sidebar__icon-wrap">
