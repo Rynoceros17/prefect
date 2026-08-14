@@ -2,6 +2,20 @@
 # Set secrets/variables in Firebase console (Hosting → App Hosting → Backend → Environment)
 # or with: firebase apphosting:secrets:set SECRET_NAME
 
+scripts:
+  buildCommand: npm run build
+  runCommand: npm start
+
+# Serve dist/ via firebase.json hosting.public (do not use "superstatic dist" — that
+# double-nests the public path and returns "Cannot GET /").
+outputFiles:
+  serverApp:
+    include:
+      - dist
+      - firebase.json
+      - package.json
+      - package-lock.json
+
 runConfig:
   minInstances: 0
   maxInstances: 10
