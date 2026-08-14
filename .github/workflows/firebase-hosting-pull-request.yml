@@ -14,9 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci && npm run build
-        env:
-          VITE_SITE_PASSWORD: ${{ secrets.VITE_SITE_PASSWORD }}
-          VITE_EDITOR_PASSWORD: ${{ secrets.VITE_EDITOR_PASSWORD }}
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
