@@ -28,5 +28,9 @@ runConfig:
 env:
   - variable: VITE_SITE_PASSWORD
     secret: viteSitePassword
+    availability:
+      - BUILD
   - variable: VITE_EDITOR_PASSWORD
     secret: viteEditorPassword
+    availability:
+      - BUILD
