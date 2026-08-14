@@ -23,34 +23,10 @@ runConfig:
   cpu: 1
   memoryMiB: 512
 
-# Vite reads VITE_* at build time. Mark BUILD availability in the console when adding vars.
-# Example (prefer Firebase console or secrets for production):
-# env:
-#   - variable: VITE_FIREBASE_API_KEY
-#     secret: viteFirebaseApiKey
-#     availability:
-#       - BUILD
-#   - variable: VITE_FIREBASE_AUTH_DOMAIN
-#     secret: viteFirebaseAuthDomain
-#     availability:
-#       - BUILD
-#   - variable: VITE_FIREBASE_PROJECT_ID
-#     secret: viteFirebaseProjectId
-#     availability:
-#       - BUILD
-#   - variable: VITE_FIREBASE_STORAGE_BUCKET
-#     secret: viteFirebaseStorageBucket
-#     availability:
-#       - BUILD
-#   - variable: VITE_FIREBASE_MESSAGING_SENDER_ID
-#     secret: viteFirebaseMessagingSenderId
-#     availability:
-#       - BUILD
-#   - variable: VITE_FIREBASE_APP_ID
-#     secret: viteFirebaseAppId
-#     availability:
-#       - BUILD
-#   - variable: VITE_EDITOR_PASSWORD
-#     secret: viteEditorPassword
-#     availability:
-#       - BUILD
+# Firebase web config is in committed .env.production (public client values).
+# Passwords are secrets — set with: firebase apphosting:secrets:set viteSitePassword
+env:
+  - variable: VITE_SITE_PASSWORD
+    secret: viteSitePassword
+  - variable: VITE_EDITOR_PASSWORD
+    secret: viteEditorPassword
