@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEFAULT_SITE_DATA, STORAGE_KEY } from '../data/defaults'
 import { isFirebaseConfigured } from '../lib/firebase'
-import { fetchSiteData, saveSiteData, subscribeSiteData } from '../services/siteDataService'
+import { applyLocalLikeState, setPostLiked } from '../services/postLikeService'
+import { fetchSiteData, saveSiteData, subscribeSiteData, updatePostLikeCount } from '../services/siteDataService'
 import type { SiteData } from '../types'
 import { migrateSiteData } from '../utils/migrateSiteData'
 import { normalizeVideoRelease } from '../utils/videoRelease'
@@ -14,7 +15,7 @@ function loadLocalSiteData(): SiteData {
     const parsed = JSON.parse(stored) as Partial<SiteData>
     const migrated = migrateSiteData(parsed)
     const videos = (migrated.videos ?? DEFAULT_SITE_DATA.videos).map(normalizeVideoRelease)
-    return { ...migrated, videos }
+    return applyLocalLikeState({ ...migrated, videos })
   } catch {
     localStorage.removeItem(STORAGE_KEY)
     return DEFAULT_SITE_DATA
@@ -35,7 +36,10 @@ function cacheSiteDataLocally(data: SiteData) {
 }
 
 function snapshotData(data: SiteData): string {
-  return JSON.stringify(data)
+  return JSON.stringify({
+    ...data,
+    posts: data.posts.map(({ likes: _likes, liked: _liked, ...post }) => post),
+  })
 }
 
 export function useSiteData() {
@@ -174,9 +178,61 @@ export function useSiteData() {
     setStorageError(null)
   }, [])
 
+  const updatePostLike = useCallback(
+    async (postId: string, delta: number): Promise<boolean> => {
+      const current = dataRef.current.posts.find((post) => post.id === postId)
+      if (!current) return false
+
+      const nextLiked = delta > 0
+      const previousLiked = current.liked
+      const previousLikes = current.likes
+      const optimisticLikes = Math.max(0, previousLikes + delta)
+
+      setPostLiked(postId, nextLiked)
+      setData((prev) => ({
+        ...prev,
+        posts: prev.posts.map((post) =>
+          post.id === postId ? { ...post, likes: optimisticLikes, liked: nextLiked } : post,
+        ),
+      }))
+
+      if (!firebaseEnabled) {
+        cacheSiteDataLocally({
+          ...dataRef.current,
+          posts: dataRef.current.posts.map((post) =>
+            post.id === postId ? { ...post, likes: optimisticLikes, liked: nextLiked } : post,
+          ),
+        })
+        return true
+      }
+
+      try {
+        await updatePostLikeCount(postId, delta)
+        return true
+      } catch (err) {
+        setPostLiked(postId, previousLiked)
+        setData((prev) => ({
+          ...prev,
+          posts: prev.posts.map((post) =>
+            post.id === postId
+              ? { ...post, likes: previousLikes, liked: previousLiked }
+              : post,
+          ),
+        }))
+        const message =
+          err instanceof Error ? err.message : 'Could not save like to Firebase.'
+        setSyncError(message)
+        console.warn(message, err)
+        return false
+      }
+    },
+    [firebaseEnabled],
+  )
+
   return {
     data,
     updateData,
+    updatePostLike,
     resetData,
     saveToCloud,
     storageError,

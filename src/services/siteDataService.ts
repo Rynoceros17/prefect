@@ -2,6 +2,7 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   type Unsubscribe,
@@ -10,6 +11,7 @@ import { DEFAULT_SITE_DATA } from '../data/defaults'
 import type { SiteData } from '../types'
 import { migrateSiteData } from '../utils/migrateSiteData'
 import { deleteStorageImages } from '../services/imageUpload'
+import { applyLocalLikeState } from '../services/postLikeService'
 import { collectSiteImageUrls, findOrphanedImageUrls } from '../utils/siteImageUrls'
 import { sanitizeForFirestore } from '../utils/firestoreSanitize'
 import { uploadEmbeddedImages } from '../utils/siteDataImages'
@@ -24,7 +26,18 @@ interface SiteDocument {
 function normalizeSiteData(raw: Partial<SiteData>): SiteData {
   const migrated = migrateSiteData(raw)
   const videos = (migrated.videos ?? DEFAULT_SITE_DATA.videos).map(normalizeVideoRelease)
-  return { ...migrated, videos }
+  return applyLocalLikeState({ ...migrated, videos })
+}
+
+function contentForFirestore(data: SiteData): SiteData {
+  return {
+    ...data,
+    posts: data.posts.map(({ liked: _liked, ...post }) => ({
+      ...post,
+      likes: Math.max(0, post.likes ?? 0),
+      liked: false,
+    })),
+  }
 }
 
 function siteDocRef() {
@@ -67,12 +80,54 @@ export function subscribeSiteData(
   )
 }
 
+export async function updatePostLikeCount(postId: string, delta: number): Promise<number> {
+  if (!isFirebaseConfigured()) {
+    throw new Error('Firebase is not configured.')
+  }
+
+  const ref = siteDocRef()
+  const db = getFirebaseDb()
+
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref)
+    if (!snapshot.exists()) {
+      throw new Error('Site data not found.')
+    }
+
+    const payload = snapshot.data() as SiteDocument
+    if (!payload.content) {
+      throw new Error('Site data not found.')
+    }
+
+    let nextLikes = 0
+    const posts = payload.content.posts.map((post) => {
+      if (post.id !== postId) return post
+      nextLikes = Math.max(0, (post.likes ?? 0) + delta)
+      return { ...post, likes: nextLikes }
+    })
+
+    transaction.set(
+      ref,
+      {
+        content: sanitizeForFirestore({
+          ...payload.content,
+          posts,
+        }),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
+
+    return nextLikes
+  })
+}
+
 export async function saveSiteData(data: SiteData): Promise<{ updatedAtMs: number; content: SiteData }> {
   if (!isFirebaseConfigured()) return { updatedAtMs: 0, content: data }
 
   const previous = await fetchSiteData()
   const uploaded = await uploadEmbeddedImages(data)
-  const content = sanitizeForFirestore(uploaded)
+  const content = sanitizeForFirestore(contentForFirestore(uploaded))
   const updatedAtMs = Date.now()
 
   await setDoc(

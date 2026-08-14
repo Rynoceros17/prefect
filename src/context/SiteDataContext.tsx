@@ -5,6 +5,7 @@ import type { SiteData } from '../types'
 interface SiteDataContextValue {
   data: SiteData
   updateData: (updater: (prev: SiteData) => SiteData) => void
+  updatePostLike: (postId: string, delta: number) => Promise<boolean>
   resetData: () => void
   saveToCloud: () => Promise<boolean>
   storageError: string | null

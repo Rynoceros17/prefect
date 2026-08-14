@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { GALLERY_USERNAME } from '../../data/gallery'
+import { useSiteDataContext } from '../../context/SiteDataContext'
 import type { GalleryPost, PostAspectRatio, PostImageMeta } from '../../types'
 import { uploadGalleryImagePair } from '../../services/imageUpload'
 import { downloadPostImages } from '../../utils/downloadImages'
@@ -34,6 +35,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps) {
+  const { updatePostLike } = useSiteDataContext()
   const postRef = useRef<HTMLElement>(null)
   const [showHearts, setShowHearts] = useState(false)
   const [shareToast, setShareToast] = useState(false)
@@ -56,16 +58,12 @@ export function PostCard({ post, isEditMode, onUpdate, onDelete }: PostCardProps
   }
 
   const handleLike = () => {
-    const liked = !post.liked
-    onUpdate({
-      ...post,
-      liked,
-      likes: liked ? post.likes + 1 : Math.max(0, post.likes - 1),
-    })
-    if (liked) {
+    const delta = post.liked ? -1 : 1
+    if (delta > 0) {
       setShowHearts(true)
       setTimeout(() => setShowHearts(false), 800)
     }
+    void updatePostLike(post.id, delta)
   }
 
   const handleShare = async () => {

@@ -103,6 +103,8 @@ export function migrateSiteData(parsed: Partial<SiteData>): SiteData {
     posts: (parsed.posts ?? DEFAULT_SITE_DATA.posts).map((post, index) => {
       const next = {
         ...post,
+        likes: post.likes ?? 0,
+        liked: false,
         createdAt: post.createdAt ?? new Date(Date.now() - index * 86400000).toISOString(),
       }
       if (post.fullImages?.length) {
