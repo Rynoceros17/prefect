@@ -1,5 +1,6 @@
 import {
   doc,
+  getDoc,
   increment,
   onSnapshot,
   setDoc,
@@ -9,6 +10,7 @@ import {
 import { FIRESTORE_STATS_PATH, getFirebaseDb, isFirebaseConfigured } from '../lib/firebase'
 
 const LOCAL_VIEWS_KEY = 'leadership-gallery-page-views'
+export const INITIAL_PAGE_VIEWS = 50
 
 interface StatsDocument {
   totalPageViews?: number
@@ -25,11 +27,11 @@ function statsDocRef() {
 function readLocalPageViews(): number {
   try {
     const raw = localStorage.getItem(LOCAL_VIEWS_KEY)
-    if (!raw) return 0
+    if (!raw) return INITIAL_PAGE_VIEWS
     const parsed = Number.parseInt(raw, 10)
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+    return Number.isFinite(parsed) && parsed >= INITIAL_PAGE_VIEWS ? parsed : INITIAL_PAGE_VIEWS
   } catch {
-    return 0
+    return INITIAL_PAGE_VIEWS
   }
 }
 
@@ -43,9 +45,40 @@ function writeLocalPageViews(count: number): void {
 
 let lastRecordedKey = ''
 let lastRecordedAt = 0
+let baselineReady: Promise<void> | null = null
+
+/** Ensure the counter starts at INITIAL_PAGE_VIEWS before tracking new visits. */
+export function ensurePageViewBaseline(): Promise<void> {
+  if (baselineReady) return baselineReady
+
+  baselineReady = (async () => {
+    if (!isFirebaseConfigured()) {
+      if (readLocalPageViews() < INITIAL_PAGE_VIEWS) {
+        writeLocalPageViews(INITIAL_PAGE_VIEWS)
+      }
+      return
+    }
+
+    const ref = statsDocRef()
+    const snapshot = await getDoc(ref)
+    if (!snapshot.exists()) {
+      await setDoc(ref, { totalPageViews: INITIAL_PAGE_VIEWS })
+      return
+    }
+
+    const current = snapshot.data()?.totalPageViews ?? 0
+    if (current < INITIAL_PAGE_VIEWS) {
+      await setDoc(ref, { totalPageViews: INITIAL_PAGE_VIEWS }, { merge: true })
+    }
+  })()
+
+  return baselineReady
+}
 
 /** Count each route open once; dedupe React StrictMode double-mounts. */
 export async function recordPageViewOnce(pathname: string, search: string): Promise<void> {
+  await ensurePageViewBaseline()
+
   const key = `${pathname}${search}`
   const now = Date.now()
   if (key === lastRecordedKey && now - lastRecordedAt < 2000) return
@@ -64,7 +97,7 @@ export async function recordPageViewOnce(pathname: string, search: string): Prom
   } catch (err) {
     const code = (err as { code?: string }).code
     if (code !== 'not-found') throw err
-    await setDoc(ref, { totalPageViews: 1 }, { merge: true })
+    await setDoc(ref, { totalPageViews: INITIAL_PAGE_VIEWS + 1 }, { merge: true })
   }
 }
 
@@ -85,7 +118,7 @@ export function subscribePageViewCount(
     statsDocRef(),
     (snapshot) => {
       const data = snapshot.data() as StatsDocument | undefined
-      onCount(Math.max(0, data?.totalPageViews ?? 0))
+      onCount(Math.max(INITIAL_PAGE_VIEWS, data?.totalPageViews ?? INITIAL_PAGE_VIEWS))
     },
     (error) => {
       onError?.(error.message || 'Could not load page views.')

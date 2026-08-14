@@ -5,6 +5,7 @@ import { Navigation } from './Navigation'
 import { EditModeBubble } from './EditModeBubble'
 import { PasswordModal } from './PasswordModal'
 import { SyncStatus } from './SyncStatus'
+import { PageViewsCounter } from './PageViewsCounter'
 import { useEditMode } from '../context/EditModeContext'
 import { useSiteDataContext } from '../context/SiteDataContext'
 
@@ -50,6 +51,7 @@ export function Layout() {
       </div>
 
       <Navigation />
+      <PageViewsCounter />
       <EditModeBubble />
       <PasswordModal />
       <SyncStatus />

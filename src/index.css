@@ -2928,6 +2928,45 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
 }
 
+.page-views-counter {
+  position: fixed;
+  top: 0.85rem;
+  right: 1.25rem;
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(250, 250, 250, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #525252;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.page-views-counter__icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.72;
+}
+
+.page-views-counter__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.page-views-counter__label {
+  opacity: 0.72;
+  font-weight: 500;
+}
+
 .ig-views-counter {
   position: absolute;
   top: 0.85rem;
@@ -3150,6 +3189,11 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
 @media (max-width: 900px) {
   .instagram-wall {
     padding: 0 1rem 2rem;
+  }
+
+  .page-views-counter {
+    top: 0.65rem;
+    right: 1rem;
   }
 
   .ig-filter-header {

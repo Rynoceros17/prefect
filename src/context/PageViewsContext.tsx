@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { useLocation } from 'react-router-dom'
 import { isFirebaseConfigured } from '../lib/firebase'
 import {
+  ensurePageViewBaseline,
   getPageViewCount,
   recordPageViewOnce,
   subscribePageViewCount,
@@ -18,7 +19,19 @@ export function PageViewsProvider({ children }: { children: ReactNode }) {
   const [totalViews, setTotalViews] = useState(0)
 
   useEffect(() => {
-    return subscribePageViewCount(setTotalViews)
+    let unsubscribe = () => {}
+    let cancelled = false
+
+    void (async () => {
+      await ensurePageViewBaseline()
+      if (cancelled) return
+      unsubscribe = subscribePageViewCount(setTotalViews)
+    })()
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
