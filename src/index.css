@@ -886,6 +886,32 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   margin-top: 1.5rem;
 }
 
+.site-password-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(75, 45, 138, 0.18), transparent 50%),
+    var(--bg-deep);
+}
+
+.site-password-gate__card {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.site-password-gate .password-actions {
+  justify-content: stretch;
+}
+
+.site-password-gate .password-actions .btn-primary {
+  width: 100%;
+}
+
 /* Leader Modal */
 
 .leader-modal {
