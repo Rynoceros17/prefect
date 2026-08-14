@@ -19,7 +19,6 @@ export function PageViewsCounter() {
         <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.75" />
       </svg>
       <span className="page-views-counter__count">{formatViewCount(totalViews)}</span>
-      <span className="page-views-counter__label">views</span>
     </div>
   )
 }

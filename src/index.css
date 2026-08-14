@@ -2962,11 +2962,6 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.page-views-counter__label {
-  opacity: 0.72;
-  font-weight: 500;
-}
-
 .ig-views-counter {
   position: absolute;
   top: 0.85rem;
