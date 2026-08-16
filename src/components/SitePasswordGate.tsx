@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useSiteAccess } from '../context/SiteAccessContext'
 import { useScrollLock } from '../hooks/useScrollLock'
+import { PasswordField } from './PasswordField'
 
 export function SitePasswordGate() {
   const { attemptUnlock } = useSiteAccess()
@@ -47,19 +48,17 @@ export function SitePasswordGate() {
           <h2>Prefect Gallery</h2>
           <p>Enter the password to view this site.</p>
           <form onSubmit={handleSubmit}>
-            <motion.input
-              type="password"
+            <PasswordField
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value)
+              onChange={(next) => {
+                setPassword(next)
                 setError(false)
               }}
-              placeholder="Password"
-              className={`password-input ${error ? 'error' : ''}`}
+              error={error}
+              shake={shake}
+              autoComplete="new-password"
+              label="Site password"
               autoFocus
-              autoComplete="current-password"
-              animate={error ? { x: [-12, 12, -8, 8, 0] } : {}}
-              transition={{ duration: 0.4 }}
             />
             {error && (
               <motion.p

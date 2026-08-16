@@ -863,10 +863,73 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   border-radius: var(--radius);
   color: var(--text);
   font-size: 1rem;
-  text-align: center;
-  letter-spacing: 0.15em;
+  text-align: left;
+  letter-spacing: normal;
   outline: none;
+}
+
+.password-input:placeholder-shown {
+  text-align: center;
+}
+
+.password-input:not(:placeholder-shown) {
+  letter-spacing: 0.06em;
+}
+
+.password-input:-webkit-autofill,
+.password-input:-webkit-autofill:hover,
+.password-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset;
+}
+
+.password-field {
+  position: relative;
+  width: 100%;
   margin-bottom: 0.5rem;
+}
+
+.password-field .password-input {
+  padding-right: 3.75rem;
+}
+
+.password-field--error .password-input {
+  border-color: var(--danger);
+}
+
+.password-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  padding: 0.35rem 0.55rem;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.password-field__toggle:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .password-input.error {

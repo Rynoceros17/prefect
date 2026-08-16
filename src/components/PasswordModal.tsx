@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useEditMode } from '../context/EditModeContext'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { ModalPortal } from './ModalPortal'
+import { PasswordField } from './PasswordField'
 
 export function PasswordModal() {
   const { showPasswordModal, closePasswordModal, attemptUnlock } = useEditMode()
@@ -11,6 +12,13 @@ export function PasswordModal() {
   const [shake, setShake] = useState(0)
 
   useScrollLock(showPasswordModal)
+
+  useEffect(() => {
+    if (!showPasswordModal) return
+    setPassword('')
+    setError(false)
+    setShake(0)
+  }, [showPasswordModal])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,18 +67,17 @@ export function PasswordModal() {
               <h2>Enter Editor Mode</h2>
               <p>Enter the secret password to unlock full editing capabilities.</p>
               <form onSubmit={handleSubmit}>
-                <motion.input
-                  type="password"
+                <PasswordField
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
+                  onChange={(next) => {
+                    setPassword(next)
                     setError(false)
                   }}
-                  placeholder="Password"
-                  className={`password-input ${error ? 'error' : ''}`}
+                  error={error}
+                  shake={shake}
+                  autoComplete="new-password"
+                  label="Editor password"
                   autoFocus
-                  animate={error ? { x: [-12, 12, -8, 8, 0] } : {}}
-                  transition={{ duration: 0.4 }}
                 />
                 {error && (
                   <motion.p
