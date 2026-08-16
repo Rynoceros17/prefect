@@ -5930,6 +5930,18 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   flex-direction: column;
   justify-content: center;
   gap: 0.2rem;
+  animation: connections-solved-in 0.28s ease;
+}
+
+@keyframes connections-solved-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .connections-solved--revealed {
@@ -5961,7 +5973,7 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
 }
 
 .connections-grid--shake {
-  animation: connections-shake 0.45s ease;
+  animation: connections-shake 0.42s ease;
 }
 
 @keyframes connections-shake {
@@ -5977,7 +5989,7 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   appearance: none;
   border: none;
   border-radius: 8px;
-  background: #efefe6;
+  background-color: #efefe6;
   color: #000;
   min-height: 84px;
   padding: 0.85rem 0.55rem;
@@ -5986,24 +5998,63 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   align-items: center;
   justify-content: center;
   text-align: center;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.connections-tile:hover:not(:disabled) {
-  background: #e2e2da;
+.connections-tile:active:not(:disabled):not(.connections-tile--selected) {
+  transform: scale(0.98);
+}
+
+.connections-tile:hover:not(:disabled):not(.connections-tile--selected) {
+  background-color: #e2e2da;
 }
 
 .connections-tile--selected {
-  background: #5a594e;
+  background-color: #5a594e;
   color: #fff;
 }
 
 .connections-tile--selected:hover:not(:disabled) {
-  background: #4f4e43;
+  background-color: #4f4e43;
 }
 
 .connections-tile--reject {
-  z-index: 1;
+  animation: connections-tile-reject 0.42s ease;
+}
+
+@keyframes connections-tile-reject {
+  0%,
+  100% {
+    transform: translateX(0);
+    background-color: #efefe6;
+    color: #000;
+  }
+  12% {
+    transform: translateX(-6px);
+    background-color: #f8d7da;
+  }
+  24% {
+    transform: translateX(6px);
+    background-color: #fbcfd4;
+  }
+  36% {
+    transform: translateX(-5px);
+    background-color: #f8d7da;
+  }
+  48% {
+    transform: translateX(5px);
+    background-color: #fbcfd4;
+  }
+  60% {
+    transform: translateX(-3px);
+    background-color: #f8d7da;
+  }
+  72% {
+    transform: translateX(3px);
+    background-color: #fbcfd4;
+  }
 }
 
 .connections-tile:disabled {

@@ -1,6 +1,6 @@
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ConnectionsGameState, ConnectionsPuzzle } from '../../../types/connections'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useState, type AnimationEvent } from 'react'
+import type { ConnectionsPuzzle, ConnectionsToggleResult } from '../../../types/connections'
 import { CONNECTIONS_MAX_MISTAKES } from '../../../types/connections'
 import {
   buildShareText,
@@ -19,11 +19,12 @@ interface ConnectionsGameProps {
 }
 
 export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
-  const [state, setState] = useState<ConnectionsGameState>(() => createConnectionsGameState(puzzle))
+  const [state, setState] = useState(() => createConnectionsGameState(puzzle))
   const [shareToast, setShareToast] = useState(false)
 
   const canSubmit = state.selected.length === 4 && state.status === 'playing'
   const canPlay = state.status === 'playing'
+  const selectedSet = useMemo(() => new Set(state.selected), [state.selected])
 
   useEffect(() => {
     if (state.status !== 'lost' || state.revealedRemaining) return
@@ -32,24 +33,6 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
     }, 900)
     return () => window.clearTimeout(timer)
   }, [puzzle, state.revealedRemaining, state.status])
-
-  useEffect(() => {
-    if (!state.shaking) return
-    const timer = window.setTimeout(() => {
-      setState((current) => ({ ...current, shaking: false }))
-    }, 450)
-    return () => window.clearTimeout(timer)
-  }, [state.shaking])
-
-  useEffect(() => {
-    if (!state.rejectFlashWord) return
-    const timer = window.setTimeout(() => {
-      setState((current) =>
-        current.rejectFlashWord ? { ...current, rejectFlashWord: null } : current,
-      )
-    }, 520)
-    return () => window.clearTimeout(timer)
-  }, [state.rejectFlashWord])
 
   const handleShare = useCallback(async () => {
     const text = buildShareText(puzzle, state)
@@ -66,6 +49,22 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
     setState(createConnectionsGameState(puzzle))
     setShareToast(false)
   }
+
+  const handleToggle = useCallback((word: string): ConnectionsToggleResult => {
+    let result: ConnectionsToggleResult = 'ignored'
+    setState((current) => {
+      const outcome = toggleWordSelection(current, word)
+      result = outcome.result
+      return outcome.next
+    })
+    return result
+  }, [])
+
+  const handleGridAnimationEnd = useCallback((event: AnimationEvent<HTMLDivElement>) => {
+      if (event.target !== event.currentTarget) return
+      if (event.animationName !== 'connections-shake') return
+      setState((current) => (current.shaking ? { ...current, shaking: false } : current))
+  }, [])
 
   const mistakeDots = useMemo(
     () =>
@@ -84,55 +83,38 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
 
       <div className="connections-board">
         <div className="connections-board__solved">
-          <AnimatePresence initial={false}>
-            {state.solved.map((group) => (
-              <ConnectionsSolvedRow
-                key={group.category.title}
-                title={group.category.title}
-                words={group.words}
-                difficulty={group.category.difficulty}
-                revealed={state.revealedRemaining && state.status === 'lost'}
-              />
-            ))}
-          </AnimatePresence>
+          {state.solved.map((group) => (
+            <ConnectionsSolvedRow
+              key={group.category.title}
+              title={group.category.title}
+              words={group.words}
+              difficulty={group.category.difficulty}
+              revealed={state.revealedRemaining && state.status === 'lost'}
+            />
+          ))}
         </div>
 
-        <LayoutGroup>
-          <motion.div
-            className={`connections-grid ${state.shaking ? 'connections-grid--shake' : ''}`}
-            layout
-          >
-            <AnimatePresence mode="popLayout">
-              {state.remaining.map((word) => (
-                <ConnectionsTile
-                  key={word}
-                  word={word}
-                  selected={state.selected.includes(word)}
-                  rejectFlash={state.rejectFlashWord === word}
-                  disabled={!canPlay}
-                  onToggle={() => setState((current) => toggleWordSelection(current, word))}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </LayoutGroup>
+        <div
+          className={`connections-grid ${state.shaking ? 'connections-grid--shake' : ''}`}
+          onAnimationEnd={handleGridAnimationEnd}
+        >
+          {state.remaining.map((word) => (
+            <ConnectionsTile
+              key={word}
+              word={word}
+              selected={selectedSet.has(word)}
+              disabled={!canPlay}
+              onToggle={handleToggle}
+            />
+          ))}
+        </div>
 
-        <AnimatePresence mode="wait">
-          {state.message && (
-            <motion.p
-              key={state.message}
-              className="connections-game__message"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2 }}
-            >
-              {state.message}
-            </motion.p>
-          )}
-        </AnimatePresence>
+        {state.message ? <p className="connections-game__message">{state.message}</p> : null}
 
-        <div className="connections-game__mistakes" aria-label={`${state.mistakes} of ${CONNECTIONS_MAX_MISTAKES} mistakes`}>
+        <div
+          className="connections-game__mistakes"
+          aria-label={`${state.mistakes} of ${CONNECTIONS_MAX_MISTAKES} mistakes`}
+        >
           {mistakeDots.map((filled, index) => (
             <span
               key={index}
@@ -191,10 +173,18 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
                   : 'Four mistakes — the remaining groups have been revealed.'}
               </p>
               <div className="connections-game__modal-actions">
-                <button type="button" className="connections-game__btn connections-game__btn--primary" onClick={handleShare}>
+                <button
+                  type="button"
+                  className="connections-game__btn connections-game__btn--primary"
+                  onClick={handleShare}
+                >
                   Share results
                 </button>
-                <button type="button" className="connections-game__btn connections-game__btn--secondary" onClick={handleReset}>
+                <button
+                  type="button"
+                  className="connections-game__btn connections-game__btn--secondary"
+                  onClick={handleReset}
+                >
                   Play again
                 </button>
               </div>

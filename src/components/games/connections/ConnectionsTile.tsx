@@ -1,45 +1,45 @@
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import type { ConnectionsToggleResult } from '../../../types/connections'
 
 interface ConnectionsTileProps {
   word: string
   selected: boolean
-  rejectFlash: boolean
   disabled: boolean
-  onToggle: () => void
+  onToggle: (word: string) => ConnectionsToggleResult
 }
 
-export function ConnectionsTile({
-  word,
-  selected,
-  rejectFlash,
-  disabled,
-  onToggle,
-}: ConnectionsTileProps) {
+export function ConnectionsTile({ word, selected, disabled, onToggle }: ConnectionsTileProps) {
+  const [rejecting, setRejecting] = useState(false)
+
+  const handleClick = () => {
+    if (disabled) return
+    const result = onToggle(word)
+    if (result === 'rejected') {
+      setRejecting(true)
+    }
+  }
+
   return (
-    <motion.button
+    <button
       type="button"
-      layout
-      layoutId={`connections-tile-${word}`}
-      className={`connections-tile ${selected ? 'connections-tile--selected' : ''} ${rejectFlash ? 'connections-tile--reject' : ''}`}
-      onClick={onToggle}
+      className={[
+        'connections-tile',
+        selected ? 'connections-tile--selected' : '',
+        rejecting ? 'connections-tile--reject' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={handleClick}
       disabled={disabled}
-      animate={
-        rejectFlash
-          ? {
-              x: [0, -7, 7, -5, 5, -3, 0],
-              backgroundColor: ['#efefe6', '#fbcfd4', '#f8d7da', '#fbcfd4', '#efefe6'],
-            }
-          : undefined
-      }
-      whileTap={disabled || rejectFlash ? undefined : { scale: 0.97 }}
-      transition={{
-        layout: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-        scale: { duration: 0.12 },
-        x: { duration: 0.45, ease: 'easeInOut' },
-        backgroundColor: { duration: 0.45, ease: 'easeInOut' },
+      aria-pressed={selected}
+      onAnimationEnd={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.animationName === 'connections-tile-reject') {
+          setRejecting(false)
+        }
       }}
     >
       <span className="connections-tile__label">{word}</span>
-    </motion.button>
+    </button>
   )
 }

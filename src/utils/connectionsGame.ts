@@ -3,6 +3,7 @@ import type {
   ConnectionsGameState,
   ConnectionsPuzzle,
   ConnectionsSolvedGroup,
+  ConnectionsToggleResult,
 } from '../types/connections'
 import { CONNECTIONS_MAX_MISTAKES } from '../types/connections'
 
@@ -30,7 +31,6 @@ export function createConnectionsGameState(puzzle: ConnectionsPuzzle): Connectio
     message: null,
     shaking: false,
     revealedRemaining: false,
-    rejectFlashWord: null,
   }
 }
 
@@ -64,32 +64,38 @@ export function isOneAway(words: string[], puzzle: ConnectionsPuzzle): boolean {
   return words.length === 4 && maxWordsSharingCategory(words, puzzle) === 3
 }
 
-export function toggleWordSelection(state: ConnectionsGameState, word: string): ConnectionsGameState {
-  if (state.status !== 'playing') return state
+export function toggleWordSelection(
+  state: ConnectionsGameState,
+  word: string,
+): { next: ConnectionsGameState; result: ConnectionsToggleResult } {
+  if (state.status !== 'playing') {
+    return { next: state, result: 'ignored' }
+  }
 
   if (state.selected.includes(word)) {
     return {
-      ...state,
-      selected: state.selected.filter((item) => item !== word),
-      message: null,
-      shaking: false,
-      rejectFlashWord: null,
+      next: {
+        ...state,
+        selected: state.selected.filter((item) => item !== word),
+        message: null,
+        shaking: false,
+      },
+      result: 'deselected',
     }
   }
 
   if (state.selected.length >= 4) {
-    return {
-      ...state,
-      rejectFlashWord: word,
-    }
+    return { next: state, result: 'rejected' }
   }
 
   return {
-    ...state,
-    selected: [...state.selected, word],
-    message: null,
-    shaking: false,
-    rejectFlashWord: null,
+    next: {
+      ...state,
+      selected: [...state.selected, word],
+      message: null,
+      shaking: false,
+    },
+    result: 'selected',
   }
 }
 

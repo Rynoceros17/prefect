@@ -29,8 +29,9 @@ export interface ConnectionsGameState {
   message: string | null
   shaking: boolean
   revealedRemaining: boolean
-  rejectFlashWord: string | null
 }
+
+export type ConnectionsToggleResult = 'selected' | 'deselected' | 'rejected' | 'ignored'
 
 export const CONNECTIONS_MAX_MISTAKES = 4
 
