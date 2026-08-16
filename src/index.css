@@ -5922,10 +5922,10 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
 
 .connections-solved {
   border-radius: 8px;
-  padding: 1rem 1.1rem;
+  padding: 1.1rem 1.1rem;
   text-align: center;
   color: #000;
-  min-height: 58px;
+  min-height: 72px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -5979,8 +5979,8 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   border-radius: 8px;
   background: #efefe6;
   color: #000;
-  min-height: 60px;
-  padding: 0.65rem 0.45rem;
+  min-height: 84px;
+  padding: 0.85rem 0.55rem;
   cursor: pointer;
   display: flex;
   align-items: center;
