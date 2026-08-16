@@ -41,6 +41,16 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
     return () => window.clearTimeout(timer)
   }, [state.shaking])
 
+  useEffect(() => {
+    if (!state.rejectFlashWord) return
+    const timer = window.setTimeout(() => {
+      setState((current) =>
+        current.rejectFlashWord ? { ...current, rejectFlashWord: null } : current,
+      )
+    }, 520)
+    return () => window.clearTimeout(timer)
+  }, [state.rejectFlashWord])
+
   const handleShare = useCallback(async () => {
     const text = buildShareText(puzzle, state)
     try {
@@ -98,6 +108,7 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
                   key={word}
                   word={word}
                   selected={state.selected.includes(word)}
+                  rejectFlash={state.rejectFlashWord === word}
                   disabled={!canPlay}
                   onToggle={() => setState((current) => toggleWordSelection(current, word))}
                 />

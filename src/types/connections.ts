@@ -29,6 +29,7 @@ export interface ConnectionsGameState {
   message: string | null
   shaking: boolean
   revealedRemaining: boolean
+  rejectFlashWord: string | null
 }
 
 export const CONNECTIONS_MAX_MISTAKES = 4

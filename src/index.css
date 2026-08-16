@@ -6002,6 +6002,10 @@ body:not(.body--edit-mode) .edit-textarea:focus-visible {
   background: #4f4e43;
 }
 
+.connections-tile--reject {
+  z-index: 1;
+}
+
 .connections-tile:disabled {
   cursor: default;
 }

@@ -30,6 +30,7 @@ export function createConnectionsGameState(puzzle: ConnectionsPuzzle): Connectio
     message: null,
     shaking: false,
     revealedRemaining: false,
+    rejectFlashWord: null,
   }
 }
 
@@ -66,17 +67,29 @@ export function isOneAway(words: string[], puzzle: ConnectionsPuzzle): boolean {
 export function toggleWordSelection(state: ConnectionsGameState, word: string): ConnectionsGameState {
   if (state.status !== 'playing') return state
 
-  const selected = state.selected.includes(word)
-    ? state.selected.filter((item) => item !== word)
-    : state.selected.length < 4
-      ? [...state.selected, word]
-      : state.selected
+  if (state.selected.includes(word)) {
+    return {
+      ...state,
+      selected: state.selected.filter((item) => item !== word),
+      message: null,
+      shaking: false,
+      rejectFlashWord: null,
+    }
+  }
+
+  if (state.selected.length >= 4) {
+    return {
+      ...state,
+      rejectFlashWord: word,
+    }
+  }
 
   return {
     ...state,
-    selected,
+    selected: [...state.selected, word],
     message: null,
     shaking: false,
+    rejectFlashWord: null,
   }
 }
 
