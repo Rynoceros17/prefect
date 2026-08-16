@@ -7,7 +7,6 @@ import { SiteDataProvider } from './context/SiteDataContext'
 import { GalleryPage } from './pages/GalleryPage'
 import { HomePage } from './pages/HomePage'
 import { ConnectionsPage } from './pages/ConnectionsPage'
-import { GamesPage } from './pages/GamesPage'
 import { JourneyPage } from './pages/JourneyPage'
 import { TheatrePage } from './pages/TheatrePage'
 
@@ -24,7 +23,7 @@ export default function App() {
                   <Route path="theatre" element={<TheatrePage />} />
                   <Route path="gallery" element={<GalleryPage />} />
                   <Route path="journey" element={<JourneyPage />} />
-                  <Route path="games" element={<GamesPage />} />
+                  <Route path="games" element={<ConnectionsPage />} />
                   <Route path="games/connections" element={<ConnectionsPage />} />
                 </Route>
               </Routes>
