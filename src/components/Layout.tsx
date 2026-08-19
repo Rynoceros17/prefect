@@ -3,9 +3,12 @@ import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Navigation } from './Navigation'
 import { EditModeBubble } from './EditModeBubble'
+import { GamesPlayerDock } from './games/GamesPlayerDock'
+import { GamesSignIn } from './games/GamesSignIn'
 import { PasswordModal } from './PasswordModal'
 import { SyncStatus } from './SyncStatus'
 import { useEditMode } from '../context/EditModeContext'
+import { GamesPlayerProvider } from '../context/GamesPlayerContext'
 import { useSiteDataContext } from '../context/SiteDataContext'
 
 const pageVariants = {
@@ -38,54 +41,66 @@ export function Layout() {
     }
   }, [isGallery, isHomepage, isJourney, isGames, isEditMode])
 
-  return (
+  const layout = (
     <div
       className={`app ${isGallery ? 'app--gallery' : ''} ${isHomepage ? 'app--homepage' : ''} ${isJourney ? 'app--journey' : ''} ${isGames ? 'app--games' : ''} ${isEditMode ? 'app--edit-mode' : ''}`}
     >
-      <div className="app__bg">
-        <div className="app__bg-orb app__bg-orb--1" />
-        <div className="app__bg-orb app__bg-orb--2" />
-        <div className="app__bg-orb app__bg-orb--3" />
-        <div className="app__bg-grid" />
-      </div>
-
-      <Navigation />
-      <EditModeBubble />
-      <PasswordModal />
-      <SyncStatus />
-
-      {isFirebaseEnabled && isLoading && (
-        <div className="site-loading" aria-live="polite" aria-busy="true">
-          <div className="site-loading__card">Loading site…</div>
+        <div className="app__bg">
+          <div className="app__bg-orb app__bg-orb--1" />
+          <div className="app__bg-orb app__bg-orb--2" />
+          <div className="app__bg-orb app__bg-orb--3" />
+          <div className="app__bg-grid" />
         </div>
-      )}
 
-      <main className="main">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            variants={pageVariants}
-            initial="initial"
-            animate="enter"
-            exit="exit"
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
-      </main>
+        <Navigation />
+        {isGames && !isEditMode && (
+          <>
+            <GamesSignIn />
+            <GamesPlayerDock />
+          </>
+        )}
+        <EditModeBubble />
+        <PasswordModal />
+        <SyncStatus />
 
-      {!isGallery && !isJourney && !isGames && (
-        <footer className="footer">
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-          >
-            Leadership Body © {new Date().getFullYear()}
-          </motion.p>
-        </footer>
-      )}
+        {isFirebaseEnabled && isLoading && (
+          <div className="site-loading" aria-live="polite" aria-busy="true">
+            <div className="site-loading__card">Loading site…</div>
+          </div>
+        )}
+
+        <main className="main">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              variants={pageVariants}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        </main>
+
+        {!isGallery && !isJourney && !isGames && (
+          <footer className="footer">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+            >
+              Leadership Body © {new Date().getFullYear()}
+            </motion.p>
+          </footer>
+        )}
     </div>
   )
+
+  if (isGames) {
+    return <GamesPlayerProvider>{layout}</GamesPlayerProvider>
+  }
+
+  return layout
 }

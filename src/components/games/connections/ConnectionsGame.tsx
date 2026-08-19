@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -29,6 +30,8 @@ import { ConnectionsTile } from './ConnectionsTile'
 interface ConnectionsGameProps {
   puzzle: ConnectionsPuzzle
   previewOnly?: boolean
+  canPlay?: boolean
+  onPuzzleSolved?: (puzzleId: string, mistakes: number) => void
 }
 
 interface PendingMerge {
@@ -73,7 +76,12 @@ function measureMergeTarget(
   }
 }
 
-export function ConnectionsGame({ puzzle, previewOnly = false }: ConnectionsGameProps) {
+export function ConnectionsGame({
+  puzzle,
+  previewOnly = false,
+  canPlay: canPlayOverride,
+  onPuzzleSolved,
+}: ConnectionsGameProps) {
   const [state, setState] = useState(() => createConnectionsGameState(puzzle))
   const [shareToast, setShareToast] = useState(false)
   const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(null)
@@ -84,14 +92,35 @@ export function ConnectionsGame({ puzzle, previewOnly = false }: ConnectionsGame
   const gridRef = useRef<HTMLDivElement>(null)
   const mergePlaceholderRef = useRef<HTMLDivElement>(null)
   const pendingMergeRef = useRef<PendingMerge | null>(null)
+  const solvedRecordedRef = useRef<string | null>(null)
 
-  const canSubmit = state.selected.length === 4 && state.status === 'playing' && !pendingMerge && !previewOnly
-  const canPlay = state.status === 'playing' && !pendingMerge && !previewOnly
+  const canSubmit =
+    state.selected.length === 4 &&
+    state.status === 'playing' &&
+    !pendingMerge &&
+    !previewOnly &&
+    (canPlayOverride ?? true)
+  const canPlay =
+    state.status === 'playing' &&
+    !pendingMerge &&
+    !previewOnly &&
+    (canPlayOverride ?? true)
   const selectedSet = useMemo(() => new Set(state.selected), [state.selected])
   const mergingWords = useMemo(
     () => new Set(pendingMerge?.words ?? mergingGroup?.words ?? []),
     [pendingMerge, mergingGroup],
   )
+
+  useLayoutEffect(() => {
+    solvedRecordedRef.current = null
+  }, [puzzle.id])
+
+  useEffect(() => {
+    if (previewOnly || state.status !== 'won' || !onPuzzleSolved) return
+    if (solvedRecordedRef.current === puzzle.id) return
+    solvedRecordedRef.current = puzzle.id
+    void onPuzzleSolved(puzzle.id, state.mistakes)
+  }, [onPuzzleSolved, previewOnly, puzzle.id, state.mistakes, state.status])
 
   useLayoutEffect(() => {
     if (!pendingMerge || !boardRef.current || !gridRef.current || !mergePlaceholderRef.current) {
@@ -139,6 +168,7 @@ export function ConnectionsGame({ puzzle, previewOnly = false }: ConnectionsGame
     setMergingGroup(null)
     pendingMergeRef.current = null
     setFreshSolvedTitle(null)
+    solvedRecordedRef.current = null
   }
 
   const handleToggle = useCallback((word: string): ConnectionsToggleResult => {

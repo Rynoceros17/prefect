@@ -7,12 +7,8 @@ import { EXAMPLE_CONNECTIONS_PUZZLE } from '../data/connectionsPuzzles'
 
 const DIFFICULTIES: ConnectionsDifficulty[] = [0, 1, 2, 3]
 
-function trimWord(word: string): string {
-  return word.trim()
-}
-
 function normalizeWords(words: string[]): [string, string, string, string] {
-  const padded = [...words.map(trimWord), '', '', '', ''].slice(0, 4)
+  const padded = [...words, '', '', '', ''].slice(0, 4)
   return [padded[0], padded[1], padded[2], padded[3]]
 }
 
@@ -21,15 +17,11 @@ function normalizeCategory(
   index: number,
 ): ConnectionsCategory {
   const words = normalizeWords(Array.isArray(category.words) ? category.words : [])
-  const difficulty =
-    typeof category.difficulty === 'number' && category.difficulty >= 0 && category.difficulty <= 3
-      ? (category.difficulty as ConnectionsDifficulty)
-      : DIFFICULTIES[index] ?? 0
 
   return {
-    title: trimWord(category.title ?? '') || `Category ${index + 1}`,
+    title: category.title ?? `Category ${index + 1}`,
     words,
-    difficulty,
+    difficulty: DIFFICULTIES[index] ?? 0,
   }
 }
 
@@ -69,21 +61,20 @@ export function validateConnectionsPuzzle(puzzle: ConnectionsPuzzle): Connection
   }
 
   puzzle.categories.forEach((category, index) => {
-    if (!trimWord(category.title)) {
+    if (!category.title.trim()) {
       errors.push(`Group ${index + 1} needs a name.`)
     }
 
     category.words.forEach((word, wordIndex) => {
-      const trimmed = trimWord(word)
-      if (!trimmed) {
+      if (!word.trim()) {
         errors.push(`Group ${index + 1}, word ${wordIndex + 1} is empty.`)
         return
       }
 
-      const key = trimmed.toLowerCase()
+      const key = word.trim().toLowerCase()
       const previous = seen.get(key)
       if (previous) {
-        errors.push(`"${trimmed}" appears more than once (${previous} and ${category.title}).`)
+        errors.push(`"${word.trim()}" appears more than once (${previous} and ${category.title}).`)
       } else {
         seen.set(key, category.title || `Group ${index + 1}`)
       }
@@ -91,7 +82,7 @@ export function validateConnectionsPuzzle(puzzle: ConnectionsPuzzle): Connection
   })
 
   const filledWords = puzzle.categories.flatMap((category) =>
-    category.words.map(trimWord).filter(Boolean),
+    category.words.filter((word) => word.trim()),
   )
   if (filledWords.length !== 16 && errors.length === 0) {
     warnings.push(`You have ${filledWords.length} of 16 words filled in.`)
@@ -103,7 +94,7 @@ export function validateConnectionsPuzzle(puzzle: ConnectionsPuzzle): Connection
 export function updateConnectionsCategory(
   puzzle: ConnectionsPuzzle,
   categoryIndex: number,
-  patch: Partial<ConnectionsCategory>,
+  patch: Partial<Omit<ConnectionsCategory, 'difficulty'>>,
 ): ConnectionsPuzzle {
   return {
     ...puzzle,
@@ -112,9 +103,10 @@ export function updateConnectionsCategory(
         ? {
             ...category,
             ...patch,
+            difficulty: DIFFICULTIES[index] ?? 0,
             words: patch.words ? normalizeWords(patch.words) : category.words,
           }
-        : category,
+        : { ...category, difficulty: DIFFICULTIES[index] ?? 0 },
     ),
   }
 }

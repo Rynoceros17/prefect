@@ -1,5 +1,5 @@
 import { useMemo, type CSSProperties } from 'react'
-import type { ConnectionsDifficulty, ConnectionsPuzzle } from '../../../types/connections'
+import type { ConnectionsPuzzle } from '../../../types/connections'
 import {
   CONNECTIONS_DIFFICULTY_COLORS,
   CONNECTIONS_DIFFICULTY_LABELS,
@@ -19,7 +19,7 @@ export function ConnectionsPuzzleEditor({ puzzle, onChange }: ConnectionsPuzzleE
   const validation = useMemo(() => validateConnectionsPuzzle(puzzle), [puzzle])
 
   const allWords = useMemo(
-    () => puzzle.categories.flatMap((category) => category.words.map((word) => word.trim()).filter(Boolean)),
+    () => puzzle.categories.flatMap((category) => category.words.filter((word) => word.trim())),
     [puzzle.categories],
   )
 
@@ -30,13 +30,13 @@ export function ConnectionsPuzzleEditor({ puzzle, onChange }: ConnectionsPuzzleE
           <p className="connections-editor__eyebrow">Edit mode</p>
           <h2 className="connections-editor__title">Puzzle editor</h2>
           <p className="connections-editor__hint">
-            Set four groups of four words. Players will see the words shuffled — only you see the answers here.
+            Set four groups of four words. Spaces and punctuation are allowed — players see the words shuffled.
           </p>
         </div>
         <label className="connections-editor__number">
           <span>Puzzle #</span>
           <input
-            className="edit-input edit-input--small"
+            className="edit-input edit-input--small connections-editor__input"
             type="number"
             min={1}
             value={puzzle.number}
@@ -63,32 +63,12 @@ export function ConnectionsPuzzleEditor({ puzzle, onChange }: ConnectionsPuzzleE
                 <span className="connections-editor__group-badge">
                   {CONNECTIONS_DIFFICULTY_LABELS[category.difficulty]}
                 </span>
-                <select
-                  className="connections-editor__difficulty"
-                  value={category.difficulty}
-                  aria-label={`Difficulty for group ${categoryIndex + 1}`}
-                  onChange={(event) =>
-                    onChange(
-                      updateConnectionsCategory(puzzle, categoryIndex, {
-                        difficulty: Number.parseInt(event.target.value, 10) as ConnectionsDifficulty,
-                      }),
-                    )
-                  }
-                >
-                  {(Object.entries(CONNECTIONS_DIFFICULTY_LABELS) as [string, string][]).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ),
-                  )}
-                </select>
               </div>
 
               <label className="connections-editor__field">
                 <span>Group name</span>
                 <input
-                  className="edit-input"
+                  className="edit-input connections-editor__input"
                   value={category.title}
                   placeholder="e.g. School Houses"
                   onChange={(event) =>
@@ -104,7 +84,7 @@ export function ConnectionsPuzzleEditor({ puzzle, onChange }: ConnectionsPuzzleE
                   <label key={wordIndex} className="connections-editor__word">
                     <span>Word {wordIndex + 1}</span>
                     <input
-                      className="edit-input"
+                      className="edit-input connections-editor__input"
                       value={word}
                       placeholder={`Word ${wordIndex + 1}`}
                       onChange={(event) =>
@@ -143,8 +123,8 @@ export function ConnectionsPuzzleEditor({ puzzle, onChange }: ConnectionsPuzzleE
         </div>
 
         <div className="connections-editor__preview" aria-label="All puzzle words">
-          {allWords.map((word) => (
-            <span key={word} className="connections-editor__preview-chip">
+          {allWords.map((word, index) => (
+            <span key={`${index}-${word}`} className="connections-editor__preview-chip">
               {word}
             </span>
           ))}
