@@ -1,3 +1,5 @@
+import type { ConnectionsPuzzle } from './types/connections'
+
 export type LeadershipRole =
   | 'School Captain'
   | 'Vice Captain'
@@ -182,6 +184,7 @@ export interface SiteData {
   posts: GalleryPost[]
   journey: JourneyData
   navEmojis: NavEmojis
+  connectionsPuzzle: ConnectionsPuzzle
   /** @deprecated migrated to teamCarouselImages */
   groupPhotoUrl?: string
   /** @deprecated migrated to homepageTitle */

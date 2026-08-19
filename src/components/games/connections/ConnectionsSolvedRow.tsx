@@ -6,6 +6,7 @@ interface ConnectionsSolvedRowProps {
   words: string[]
   difficulty: ConnectionsDifficulty
   revealed?: boolean
+  instant?: boolean
 }
 
 export function ConnectionsSolvedRow({
@@ -13,10 +14,17 @@ export function ConnectionsSolvedRow({
   words,
   difficulty,
   revealed = false,
+  instant = false,
 }: ConnectionsSolvedRowProps) {
   return (
     <div
-      className={`connections-solved ${revealed ? 'connections-solved--revealed' : ''}`}
+      className={[
+        'connections-solved',
+        revealed ? 'connections-solved--revealed' : '',
+        instant ? 'connections-solved--instant' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{ backgroundColor: CONNECTIONS_DIFFICULTY_COLORS[difficulty] }}
     >
       <span className="connections-solved__title">{title}</span>

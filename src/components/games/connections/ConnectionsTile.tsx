@@ -4,11 +4,18 @@ import type { ConnectionsToggleResult } from '../../../types/connections'
 interface ConnectionsTileProps {
   word: string
   selected: boolean
+  hidden?: boolean
   disabled: boolean
   onToggle: (word: string) => ConnectionsToggleResult
 }
 
-export function ConnectionsTile({ word, selected, disabled, onToggle }: ConnectionsTileProps) {
+export function ConnectionsTile({
+  word,
+  selected,
+  hidden = false,
+  disabled,
+  onToggle,
+}: ConnectionsTileProps) {
   const [rejecting, setRejecting] = useState(false)
 
   const handleClick = () => {
@@ -22,10 +29,12 @@ export function ConnectionsTile({ word, selected, disabled, onToggle }: Connecti
   return (
     <button
       type="button"
+      data-word={word}
       className={[
         'connections-tile',
         selected ? 'connections-tile--selected' : '',
         rejecting ? 'connections-tile--reject' : '',
+        hidden ? 'connections-tile--hidden' : '',
       ]
         .filter(Boolean)
         .join(' ')}

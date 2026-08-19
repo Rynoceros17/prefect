@@ -33,8 +33,6 @@ export interface ConnectionsGameState {
 
 export type ConnectionsToggleResult = 'selected' | 'deselected' | 'rejected' | 'ignored'
 
-export const CONNECTIONS_MAX_MISTAKES = 4
-
 export const CONNECTIONS_DIFFICULTY_COLORS: Record<ConnectionsDifficulty, string> = {
   0: '#f9df6d',
   1: '#a0c35a',

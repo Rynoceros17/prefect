@@ -1,11 +1,11 @@
 import type {
   ConnectionsCategory,
+  ConnectionsDifficulty,
   ConnectionsGameState,
   ConnectionsPuzzle,
   ConnectionsSolvedGroup,
   ConnectionsToggleResult,
 } from '../types/connections'
-import { CONNECTIONS_MAX_MISTAKES } from '../types/connections'
 
 function shuffleArray<T>(items: T[]): T[] {
   const next = [...items]
@@ -142,7 +142,6 @@ function withWrongGuess(
   alreadyGuessed: boolean,
 ): ConnectionsGameState {
   const mistakes = alreadyGuessed ? state.mistakes : state.mistakes + 1
-  const lost = mistakes >= CONNECTIONS_MAX_MISTAKES
   const wrongGuessKeys = new Set(state.wrongGuessKeys)
   wrongGuessKeys.add(key)
 
@@ -156,9 +155,41 @@ function withWrongGuess(
     selected: [],
     message,
     shaking: !alreadyGuessed,
-    status: lost ? 'lost' : state.status,
     wrongGuessKeys,
-    revealedRemaining: lost ? true : state.revealedRemaining,
+  }
+}
+
+export function applySolvedGroup(
+  state: ConnectionsGameState,
+  category: ConnectionsCategory,
+  words: string[],
+): ConnectionsGameState {
+  return withSolvedGroup(state, category, words)
+}
+
+export function previewSubmitSelection(
+  state: ConnectionsGameState,
+  puzzle: ConnectionsPuzzle,
+):
+  | { kind: 'correct'; category: ConnectionsCategory; words: string[] }
+  | { kind: 'wrong'; next: ConnectionsGameState }
+  | { kind: 'invalid' } {
+  if (state.status !== 'playing' || state.selected.length !== 4) {
+    return { kind: 'invalid' }
+  }
+
+  const words = [...state.selected]
+  const key = guessKey(words)
+  const alreadyGuessed = state.wrongGuessKeys.has(key)
+  const category = findMatchingCategory(words, puzzle, state.solved)
+
+  if (category) {
+    return { kind: 'correct', category, words }
+  }
+
+  return {
+    kind: 'wrong',
+    next: withWrongGuess(state, key, puzzle, words, alreadyGuessed),
   }
 }
 
@@ -205,18 +236,20 @@ export function revealRemainingGroups(
   }
 }
 
-export function buildShareText(puzzle: ConnectionsPuzzle, state: ConnectionsGameState): string {
-  const lines = state.solved.map((group) => {
-    const color =
-      group.category.difficulty === 0
-        ? '🟨'
-        : group.category.difficulty === 1
-          ? '🟩'
-          : group.category.difficulty === 2
-            ? '🟦'
-            : '🟪'
-    return color.repeat(4)
-  })
+export function getDifficultyEmoji(difficulty: ConnectionsDifficulty): string {
+  return difficulty === 0 ? '🟨' : difficulty === 1 ? '🟩' : difficulty === 2 ? '🟦' : '🟪'
+}
 
-  return [`Prefect Connections #${puzzle.number}`, ...lines, `${state.mistakes} mistakes`].join('\n')
+export function buildConnectionsEmojiLines(state: ConnectionsGameState): string[] {
+  return state.solved.map((group) => getDifficultyEmoji(group.category.difficulty).repeat(4))
+}
+
+export function buildConnectionsEmojiResult(state: ConnectionsGameState): string {
+  return buildConnectionsEmojiLines(state).join('\n')
+}
+
+export function buildShareText(puzzle: ConnectionsPuzzle, state: ConnectionsGameState): string {
+  const emojiGrid = buildConnectionsEmojiResult(state)
+  const mistakeLabel = `${state.mistakes} mistake${state.mistakes === 1 ? '' : 's'}`
+  return [`Prefect Connections #${puzzle.number}`, emojiGrid, mistakeLabel].filter(Boolean).join('\n')
 }

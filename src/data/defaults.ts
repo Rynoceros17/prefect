@@ -1,4 +1,5 @@
 import type { SiteData } from '../types'
+import { EXAMPLE_CONNECTIONS_PUZZLE } from './connectionsPuzzles'
 import { normalizeJourneyData } from '../utils/journey'
 
 const placeholderPortrait = (seed: number) =>
@@ -176,6 +177,7 @@ export const DEFAULT_SITE_DATA: SiteData = {
     journey: '🚀',
     games: '🎮',
   },
+  connectionsPuzzle: EXAMPLE_CONNECTIONS_PUZZLE,
 }
 
 export const STORAGE_KEY = 'leadership-gallery-data'

@@ -1,56 +1,148 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useCallback, useEffect, useMemo, useState, type AnimationEvent } from 'react'
-import type { ConnectionsPuzzle, ConnectionsToggleResult } from '../../../types/connections'
-import { CONNECTIONS_MAX_MISTAKES } from '../../../types/connections'
 import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type AnimationEvent,
+} from 'react'
+import type { ConnectionsPuzzle, ConnectionsToggleResult } from '../../../types/connections'
+import {
+  applySolvedGroup,
+  buildConnectionsEmojiLines,
   buildShareText,
   createConnectionsGameState,
   deselectAll,
-  revealRemainingGroups,
+  previewSubmitSelection,
   shuffleRemaining,
-  submitSelection,
   toggleWordSelection,
 } from '../../../utils/connectionsGame'
+import {
+  ConnectionsGroupMerge,
+  type MergeRect,
+  type MergingGroup,
+} from './ConnectionsGroupMerge'
 import { ConnectionsSolvedRow } from './ConnectionsSolvedRow'
 import { ConnectionsTile } from './ConnectionsTile'
 
 interface ConnectionsGameProps {
   puzzle: ConnectionsPuzzle
+  previewOnly?: boolean
 }
 
-export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
+interface PendingMerge {
+  category: MergingGroup['category']
+  words: string[]
+}
+
+function captureTileRects(
+  words: string[],
+  gridEl: HTMLElement,
+  boardEl: HTMLElement,
+): MergeRect[] {
+  const boardRect = boardEl.getBoundingClientRect()
+  return words.map((word) => {
+    const tile = gridEl.querySelector(`[data-word="${CSS.escape(word)}"]`)
+    if (!tile) {
+      return { left: 0, top: 0, width: 0, height: 0 }
+    }
+    const rect = tile.getBoundingClientRect()
+    return {
+      left: rect.left - boardRect.left,
+      top: rect.top - boardRect.top,
+      width: rect.width,
+      height: rect.height,
+    }
+  })
+}
+
+function measureMergeTarget(
+  gridEl: HTMLElement,
+  targetEl: HTMLElement,
+  boardEl: HTMLElement,
+): MergeRect {
+  const boardRect = boardEl.getBoundingClientRect()
+  const gridRect = gridEl.getBoundingClientRect()
+  const targetRect = targetEl.getBoundingClientRect()
+  return {
+    left: gridRect.left - boardRect.left,
+    top: targetRect.top - boardRect.top,
+    width: gridRect.width,
+    height: targetRect.height,
+  }
+}
+
+export function ConnectionsGame({ puzzle, previewOnly = false }: ConnectionsGameProps) {
   const [state, setState] = useState(() => createConnectionsGameState(puzzle))
   const [shareToast, setShareToast] = useState(false)
+  const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(null)
+  const [mergingGroup, setMergingGroup] = useState<MergingGroup | null>(null)
+  const [freshSolvedTitle, setFreshSolvedTitle] = useState<string | null>(null)
 
-  const canSubmit = state.selected.length === 4 && state.status === 'playing'
-  const canPlay = state.status === 'playing'
+  const boardRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const mergePlaceholderRef = useRef<HTMLDivElement>(null)
+  const pendingMergeRef = useRef<PendingMerge | null>(null)
+
+  const canSubmit = state.selected.length === 4 && state.status === 'playing' && !pendingMerge && !previewOnly
+  const canPlay = state.status === 'playing' && !pendingMerge && !previewOnly
   const selectedSet = useMemo(() => new Set(state.selected), [state.selected])
+  const mergingWords = useMemo(
+    () => new Set(pendingMerge?.words ?? mergingGroup?.words ?? []),
+    [pendingMerge, mergingGroup],
+  )
 
-  useEffect(() => {
-    if (state.status !== 'lost' || state.revealedRemaining) return
-    const timer = window.setTimeout(() => {
-      setState((current) => revealRemainingGroups(current, puzzle))
-    }, 900)
-    return () => window.clearTimeout(timer)
-  }, [puzzle, state.revealedRemaining, state.status])
+  useLayoutEffect(() => {
+    if (!pendingMerge || !boardRef.current || !gridRef.current || !mergePlaceholderRef.current) {
+      return
+    }
+
+    const rects = captureTileRects(
+      pendingMerge.words,
+      gridRef.current,
+      boardRef.current,
+    )
+    const target = measureMergeTarget(
+      gridRef.current,
+      mergePlaceholderRef.current,
+      boardRef.current,
+    )
+
+    pendingMergeRef.current = pendingMerge
+    setMergingGroup({
+      category: pendingMerge.category,
+      words: pendingMerge.words,
+      rects,
+      target,
+    })
+    setPendingMerge(null)
+  }, [pendingMerge])
+
+  const emojiLines = useMemo(() => buildConnectionsEmojiLines(state), [state.solved])
+  const shareText = useMemo(() => buildShareText(puzzle, state), [puzzle, state])
 
   const handleShare = useCallback(async () => {
-    const text = buildShareText(puzzle, state)
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(shareText)
       setShareToast(true)
       window.setTimeout(() => setShareToast(false), 2200)
     } catch {
-      window.prompt('Copy your result:', text)
+      window.prompt('Copy your result:', shareText)
     }
-  }, [puzzle, state])
+  }, [shareText])
 
   const handleReset = () => {
     setState(createConnectionsGameState(puzzle))
     setShareToast(false)
+    setPendingMerge(null)
+    setMergingGroup(null)
+    pendingMergeRef.current = null
+    setFreshSolvedTitle(null)
   }
 
   const handleToggle = useCallback((word: string): ConnectionsToggleResult => {
+    if (previewOnly || pendingMerge || mergingGroup) return 'ignored'
     let result: ConnectionsToggleResult = 'ignored'
     setState((current) => {
       const outcome = toggleWordSelection(current, word)
@@ -58,22 +150,44 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
       return outcome.next
     })
     return result
+  }, [mergingGroup, pendingMerge, previewOnly])
+
+  const handleSubmit = useCallback(() => {
+    if (!canSubmit) return
+
+    const preview = previewSubmitSelection(state, puzzle)
+    if (preview.kind === 'invalid') return
+
+    if (preview.kind === 'wrong') {
+      setState(preview.next)
+      return
+    }
+
+    setPendingMerge({ category: preview.category, words: preview.words })
+  }, [canSubmit, puzzle, state])
+
+  const handleMergeComplete = useCallback(() => {
+    const pending = pendingMergeRef.current
+    if (!pending) {
+      setMergingGroup(null)
+      return
+    }
+
+    setState((current) => applySolvedGroup(current, pending.category, pending.words))
+    setFreshSolvedTitle(pending.category.title)
+    pendingMergeRef.current = null
+    setMergingGroup(null)
+    window.setTimeout(() => setFreshSolvedTitle(null), 100)
   }, [])
 
   const handleGridAnimationEnd = useCallback((event: AnimationEvent<HTMLDivElement>) => {
-      if (event.target !== event.currentTarget) return
-      if (event.animationName !== 'connections-shake') return
-      setState((current) => (current.shaking ? { ...current, shaking: false } : current))
+    if (event.target !== event.currentTarget) return
+    if (event.animationName !== 'connections-shake') return
+    setState((current) => (current.shaking ? { ...current, shaking: false } : current))
   }, [])
 
-  const mistakeDots = useMemo(
-    () =>
-      Array.from({ length: CONNECTIONS_MAX_MISTAKES }, (_, index) => index < state.mistakes),
-    [state.mistakes],
-  )
-
   return (
-    <div className="connections-game">
+    <div className={`connections-game ${previewOnly ? 'connections-game--preview' : ''}`}>
       <header className="connections-game__header">
         <p className="connections-game__eyebrow">Prefect Games</p>
         <h1 className="connections-game__title">Connections</h1>
@@ -81,7 +195,7 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
         <p className="connections-game__meta">Puzzle #{puzzle.number}</p>
       </header>
 
-      <div className="connections-board">
+      <div className="connections-board" ref={boardRef}>
         <div className="connections-board__solved">
           {state.solved.map((group) => (
             <ConnectionsSolvedRow
@@ -89,12 +203,21 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
               title={group.category.title}
               words={group.words}
               difficulty={group.category.difficulty}
-              revealed={state.revealedRemaining && state.status === 'lost'}
+              revealed={false}
+              instant={freshSolvedTitle === group.category.title}
             />
           ))}
+          {pendingMerge && (
+            <div
+              ref={mergePlaceholderRef}
+              className="connections-solved connections-solved--placeholder"
+              aria-hidden
+            />
+          )}
         </div>
 
         <div
+          ref={gridRef}
           className={`connections-grid ${state.shaking ? 'connections-grid--shake' : ''}`}
           onAnimationEnd={handleGridAnimationEnd}
         >
@@ -103,25 +226,42 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
               key={word}
               word={word}
               selected={selectedSet.has(word)}
+              hidden={mergingWords.has(word)}
               disabled={!canPlay}
               onToggle={handleToggle}
             />
           ))}
         </div>
 
+        {mergingGroup && (
+          <ConnectionsGroupMerge group={mergingGroup} onComplete={handleMergeComplete} />
+        )}
+
         {state.message ? <p className="connections-game__message">{state.message}</p> : null}
 
-        <div
-          className="connections-game__mistakes"
-          aria-label={`${state.mistakes} of ${CONNECTIONS_MAX_MISTAKES} mistakes`}
-        >
-          {mistakeDots.map((filled, index) => (
-            <span
-              key={index}
-              className={`connections-game__mistake-dot ${filled ? 'connections-game__mistake-dot--filled' : ''}`}
-            />
-          ))}
+        <div className="connections-game__mistakes" aria-label={`${state.mistakes} mistakes`}>
+          <span className="connections-game__mistakes-label">Mistakes</span>
+          <span className="connections-game__mistakes-count">{state.mistakes}</span>
         </div>
+
+        {emojiLines.length > 0 && (
+          <div className="connections-game__result-live">
+            <p className="connections-game__result-live-label">Your result</p>
+            <button
+              type="button"
+              className="connections-game__result-grid"
+              onClick={handleShare}
+              aria-label="Copy emoji result"
+            >
+              {emojiLines.map((line, index) => (
+                <span key={index} className="connections-game__result-row">
+                  {line}
+                </span>
+              ))}
+            </button>
+            <p className="connections-game__result-live-hint">Tap to copy</p>
+          </div>
+        )}
 
         <div className="connections-game__actions">
           <button
@@ -143,7 +283,7 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
           <button
             type="button"
             className="connections-game__btn connections-game__btn--primary"
-            onClick={() => setState((current) => submitSelection(current, puzzle))}
+            onClick={handleSubmit}
             disabled={!canSubmit}
           >
             Submit
@@ -152,7 +292,7 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
       </div>
 
       <AnimatePresence>
-        {(state.status === 'won' || state.status === 'lost') && (
+        {!previewOnly && state.status === 'won' && (
           <motion.div
             className="connections-game__overlay"
             initial={{ opacity: 0 }}
@@ -166,19 +306,30 @@ export function ConnectionsGame({ puzzle }: ConnectionsGameProps) {
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               transition={{ type: 'spring', damping: 24, stiffness: 320 }}
             >
-              <h2>{state.status === 'won' ? 'Perfect!' : 'Game over'}</h2>
-              <p>
-                {state.status === 'won'
-                  ? 'You found all four groups.'
-                  : 'Four mistakes — the remaining groups have been revealed.'}
-              </p>
+              <h2>Perfect!</h2>
+              <p>You found all four groups in {state.mistakes} mistake{state.mistakes === 1 ? '' : 's'}.</p>
+
+              <button
+                type="button"
+                className="connections-game__result-grid connections-game__result-grid--modal"
+                onClick={handleShare}
+                aria-label="Copy emoji result"
+              >
+                {emojiLines.map((line, index) => (
+                  <span key={index} className="connections-game__result-row">
+                    {line}
+                  </span>
+                ))}
+              </button>
+              <p className="connections-game__result-copy-hint">Tap the emojis to copy your score</p>
+
               <div className="connections-game__modal-actions">
                 <button
                   type="button"
                   className="connections-game__btn connections-game__btn--primary"
                   onClick={handleShare}
                 >
-                  Share results
+                  Copy result
                 </button>
                 <button
                   type="button"

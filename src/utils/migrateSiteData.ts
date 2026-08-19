@@ -1,5 +1,6 @@
 import type { LeaderHotspot, LeaderProfile, LeadershipRole, NavEmojis, SiteData } from '../types'
 import { DEFAULT_SITE_DATA } from '../data/defaults'
+import { normalizeConnectionsPuzzle } from './connectionsPuzzle'
 import { normalizeRole } from './leaders'
 import { normalizeJourneyData } from './journey'
 import { normalizeTheatreGridVideos } from './theatreGrid'
@@ -100,6 +101,9 @@ export function migrateSiteData(parsed: Partial<SiteData>): SiteData {
       parsed.theatreGridVideos ?? DEFAULT_SITE_DATA.theatreGridVideos,
     ),
     journey: normalizeJourneyData(parsed.journey ?? DEFAULT_SITE_DATA.journey),
+    connectionsPuzzle: normalizeConnectionsPuzzle(
+      parsed.connectionsPuzzle ?? DEFAULT_SITE_DATA.connectionsPuzzle,
+    ),
     posts: (parsed.posts ?? DEFAULT_SITE_DATA.posts).map((post, index) => {
       const next = {
         ...post,
